@@ -1333,3 +1333,74 @@
     font-size: 13px;
   }
 } 
+
+/* Sistema de Unidades Táticas PW */
+.units-panel {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.unit-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 60px;
+}
+
+.unit-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.unit-button.active {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.unit-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.unit-name {
+    font-size: 10px;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+/* Responsividade para unidades */
+@media (max-width: 768px) {
+    .units-panel {
+        grid-template-columns: repeat(3, 1fr);
+        max-height: 200px;
+    }
+    
+    .unit-button {
+        min-height: 50px;
+        padding: 6px;
+    }
+    
+    .unit-icon {
+        font-size: 16px;
+    }
+    
+    .unit-name {
+        font-size: 9px;
+    }
+} 

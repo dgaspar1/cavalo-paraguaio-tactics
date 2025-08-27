@@ -1,20 +1,31 @@
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const cors = require('cors');
-const path = require('path');
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server, {
+const server = createServer(app);
+const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 // Armazenar sessões
@@ -51,15 +62,19 @@ io.on('connection', (socket) => {
   // Entrar em uma sessão
   socket.on('join-session', (data) => {
     const { sessionId, playerId } = data;
+    console.log(`🔄 JOIN-SESSION: Jogador ${playerId} tentando entrar na sessão ${sessionId}`);
     
     // Criar sessão se não existir
     if (!sessions[sessionId]) {
+      console.log(`📝 Criando nova sessão: ${sessionId}`);
       sessions[sessionId] = {
         players: [],
         drawings: [],
         layers: {}, // Armazenar dados das camadas por sessão
         messages: [] // Adicionar array de mensagens
       };
+    } else {
+      console.log(`📊 Sessão ${sessionId} já existe com ${sessions[sessionId].drawings.length} desenhos`);
     }
 
     const session = sessions[sessionId];
@@ -75,6 +90,9 @@ io.on('connection', (socket) => {
     session.players.push(player);
     socket.join(sessionId);
 
+    console.log(`👥 Jogadores na sessão ${sessionId}: ${session.players.length}`);
+    console.log(`📊 Desenhos na sessão ${sessionId}: ${session.drawings.length}`);
+
     // Notificar outros jogadores
     socket.to(sessionId).emit('player-joined', player);
 
@@ -84,15 +102,25 @@ io.on('connection', (socket) => {
       sessionId
     });
 
+    // Enviar desenhos existentes para o novo jogador
+    console.log(`📤 Enviando ${session.drawings.length} desenhos para ${playerId}`);
+    socket.emit('drawing-history', session.drawings);
+
+    // Enviar estado das camadas para o novo jogador
+    console.log(`📤 Enviando estado de ${Object.keys(session.layers).length} camadas para ${playerId}`);
+    socket.emit('layers-state', session.layers);
+
     // Enviar mensagens existentes para o novo jogador
     socket.emit('chat-history', session.messages);
 
-    console.log(`Jogador ${playerId} entrou na sessão ${sessionId}`);
+    console.log(`✅ Jogador ${playerId} entrou na sessão ${sessionId}`);
   });
 
   // Receber desenhos
   socket.on('drawing', (data) => {
     const { sessionId, type, playerId, layerId } = data;
+    console.log(`🎨 DRAWING: Recebido desenho do tipo ${type} de ${playerId} na sessão ${sessionId}`);
+    
     const session = sessions[sessionId];
 
     if (session) {
@@ -102,14 +130,21 @@ io.on('connection', (socket) => {
         timestamp: Date.now()
       });
 
+      console.log(`💾 Desenho armazenado. Total na sessão: ${session.drawings.length}`);
+
       // Enviar para outros jogadores na mesma sessão
       socket.to(sessionId).emit('drawing-update', data);
+      console.log(`📤 Desenho enviado para outros jogadores na sessão ${sessionId}`);
+    } else {
+      console.log(`❌ Sessão ${sessionId} não encontrada para o desenho`);
     }
   });
 
   // Gerenciamento de camadas
   socket.on('layer-update', (data) => {
     const { sessionId, layerId, action, layerData } = data;
+    console.log(`📑 LAYER-UPDATE: ${action} na camada ${layerId} da sessão ${sessionId}`);
+    
     const session = sessions[sessionId];
 
     if (session) {
@@ -121,17 +156,23 @@ io.on('connection', (socket) => {
       switch (action) {
         case 'create':
           session.layers[layerId] = layerData;
+          console.log(`📝 Camada ${layerId} criada`);
           break;
         case 'update':
           session.layers[layerId] = { ...session.layers[layerId], ...layerData };
+          console.log(`📝 Camada ${layerId} atualizada`);
           break;
         case 'delete':
           delete session.layers[layerId];
+          console.log(`🗑️ Camada ${layerId} deletada`);
           break;
       }
 
       // Enviar atualização para outros jogadores
       socket.to(sessionId).emit('layer-update', data);
+      console.log(`📤 Atualização de camada enviada para outros jogadores`);
+    } else {
+      console.log(`❌ Sessão ${sessionId} não encontrada para atualização de camada`);
     }
   });
 
@@ -227,4 +268,6 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor Cavalo Paraguayo Tactics rodando na porta ${PORT}`);
   console.log(`📊 Sessões ativas: ${Object.keys(sessions).length}`);
+  console.log(`🔗 Socket.IO configurado com CORS para:`, ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"]);
+  console.log(`🌐 Servidor acessível em: http://localhost:${PORT}`);
 }); 
