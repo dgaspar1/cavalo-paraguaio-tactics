@@ -22,7 +22,6 @@ interface Layer {
     name: string;
     visible: boolean;
     locked: boolean;
-    opacity: number;
     canvas: HTMLCanvasElement;
 }
 
@@ -68,7 +67,8 @@ const App: React.FC = () => {
     const [selectedUnitType, setSelectedUnitType] = useState('tank');
     const [layers, setLayers] = useState<Layer[]>([]);
     const [activeLayerId, setActiveLayerId] = useState<string>('');
-    const [showLayerManager, setShowLayerManager] = useState<boolean>(true);
+    const [showRightSidebar, setShowRightSidebar] = useState<boolean>(true);
+    const [activeRightTab, setActiveRightTab] = useState<'layers' | 'chat'>('layers');
     const [editingLayerId, setEditingLayerId] = useState<string>('');
     const [editingLayerName, setEditingLayerName] = useState<string>('');
     const [tempLines, setTempLines] = useState<TempLine[]>([]);
@@ -115,11 +115,29 @@ const App: React.FC = () => {
     const [toolbarWidth, setToolbarWidth] = useState<number>(280);
     const [layersPanelWidth, setLayersPanelWidth] = useState<number>(300);
     const [isResizingToolbar, setIsResizingToolbar] = useState<boolean>(false);
+    const [showToolbar, setShowToolbar] = useState<boolean>(true);
 
     // Sistema de carregamento de ícones
     const [loadedIcons, setLoadedIcons] = useState<{ [key: string]: HTMLImageElement }>({});
     const [iconsLoaded, setIconsLoaded] = useState<boolean>(false);
     const [isResizingLayers, setIsResizingLayers] = useState<boolean>(false);
+
+    // Estados para controlar seções colapsáveis da toolbar
+    const [collapsedSections, setCollapsedSections] = useState<{
+        arsenal: boolean;
+        identification: boolean;
+        caliber: boolean;
+        icons: boolean;
+        units: boolean;
+        actions: boolean;
+    }>({
+        arsenal: false,
+        identification: false,
+        caliber: false,
+        icons: false,
+        units: false,
+        actions: false
+    });
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const contextRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -259,7 +277,6 @@ const App: React.FC = () => {
                 name,
                 visible: true,
                 locked: false,
-                opacity: 1,
                 canvas
             };
         };
@@ -272,11 +289,29 @@ const App: React.FC = () => {
     useEffect(() => {
         const img = new Image();
         img.onload = () => {
+            console.log('✅ Imagem de fundo carregada com sucesso');
             backgroundImageRef.current = img;
             redrawCanvas();
         };
+        img.onerror = () => {
+            console.error('❌ Erro ao carregar imagem de fundo');
+        };
         img.src = '/mapa-tw.png';
     }, []);
+
+    // Monitorar quando o canvas é montado e forçar redesenho
+    useEffect(() => {
+        if (canvasRef.current && activeTab === 'canvas') {
+            console.log('🎯 Canvas montado, forçando redesenho');
+            // Aguardar um pouco para garantir que tudo foi inicializado
+            const timer = setTimeout(() => {
+                redrawCanvas();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [canvasRef.current, activeTab]);
+
+
 
     // Carregar ícones das unidades
     useEffect(() => {
@@ -410,7 +445,6 @@ const App: React.FC = () => {
                     name: 'Camada Principal',
                     visible: true,
                     locked: false,
-                    opacity: 1,
                     canvas: (() => {
                         const canvas = document.createElement('canvas');
                         canvas.width = 800;
@@ -537,7 +571,7 @@ const App: React.FC = () => {
                             name: layerData.name || 'Camada Sincronizada',
                             visible: layerData.visible !== undefined ? layerData.visible : true,
                             locked: layerData.locked !== undefined ? layerData.locked : false,
-                            opacity: layerData.opacity !== undefined ? layerData.opacity : 1,
+
                             canvas: (() => {
                                 const canvas = document.createElement('canvas');
                                 canvas.width = 800;
@@ -601,7 +635,7 @@ const App: React.FC = () => {
                             name: data.layerData.name || 'Camada Sincronizada',
                             visible: data.layerData.visible !== undefined ? data.layerData.visible : true,
                             locked: data.layerData.locked !== undefined ? data.layerData.locked : false,
-                            opacity: data.layerData.opacity !== undefined ? data.layerData.opacity : 1,
+
                             canvas: (() => {
                                 const canvas = document.createElement('canvas');
                                 canvas.width = 800;
@@ -693,19 +727,18 @@ const App: React.FC = () => {
 
         // Desenhar imagem de fundo
         if (backgroundImageRef.current) {
+            console.log('🎨 Desenhando imagem de fundo');
             context.drawImage(backgroundImageRef.current, 0, 0, canvas.width, canvas.height);
+        } else {
+            console.log('⚠️ Imagem de fundo não disponível');
         }
 
         // Desenhar camadas visíveis
         layers.forEach(layer => {
             if (layer.visible) {
-                context.globalAlpha = layer.opacity;
                 context.drawImage(layer.canvas, 0, 0);
             }
         });
-
-        // Resetar opacidade
-        context.globalAlpha = 1;
 
         // Desenhar linhas temporárias com fade progressivo
         const now = Date.now();
@@ -741,6 +774,19 @@ const App: React.FC = () => {
     useEffect(() => {
         redrawCanvas();
     }, [layers, tempLines]);
+
+    // Forçar redesenho quando voltar para a aba canvas
+    useEffect(() => {
+        if (activeTab === 'canvas') {
+            console.log('🔄 Forçando redesenho do canvas ao voltar para aba canvas');
+            // Aguardar o próximo frame para garantir que o canvas foi montado
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    redrawCanvas();
+                }, 50);
+            });
+        }
+    }, [activeTab]);
 
     const handleRemoteDrawing = (data: any) => {
         if (data.layerId && data.data) {
@@ -784,7 +830,7 @@ const App: React.FC = () => {
             timestamp: data.timestamp,
             segments: data.segments || []
         };
-        
+
         setTempLines(prev => [...prev, tempLine]);
     };
 
@@ -794,7 +840,7 @@ const App: React.FC = () => {
         } else if (data.type === 'delete') {
             setLayers(prev => prev.filter(l => l.id !== data.layerId));
         } else if (data.type === 'update') {
-            setLayers(prev => prev.map(l => 
+            setLayers(prev => prev.map(l =>
                 l.id === data.layerId ? { ...l, ...data.updates } : l
             ));
         }
@@ -816,7 +862,6 @@ const App: React.FC = () => {
                         name: activeLayer.name,
                         visible: activeLayer.visible,
                         locked: activeLayer.locked,
-                        opacity: activeLayer.opacity,
                         canvasData: activeLayer.canvas.toDataURL()
                     }
                 });
@@ -1010,7 +1055,7 @@ const App: React.FC = () => {
                             name: activeLayer.name,
                             visible: activeLayer.visible,
                             locked: activeLayer.locked,
-                            opacity: activeLayer.opacity,
+
                             canvasData: activeLayer.canvas.toDataURL()
                         }
                     });
@@ -1039,7 +1084,7 @@ const App: React.FC = () => {
                     name: activeLayer.name,
                     visible: activeLayer.visible,
                     locked: activeLayer.locked,
-                    opacity: activeLayer.opacity,
+
                     canvasData: activeLayer.canvas.toDataURL()
                 }
             });
@@ -1130,7 +1175,6 @@ const App: React.FC = () => {
             name: `Layer ${layers.length + 1}`,
             visible: true,
             locked: false,
-            opacity: 1,
             canvas: (() => {
                 const canvas = document.createElement('canvas');
                 canvas.width = 800;
@@ -1153,7 +1197,7 @@ const App: React.FC = () => {
                     name: newLayer.name,
                     visible: newLayer.visible,
                     locked: newLayer.locked,
-                    opacity: newLayer.opacity,
+
                     canvasData: newLayer.canvas.toDataURL()
                 }
             });
@@ -1188,13 +1232,7 @@ const App: React.FC = () => {
         ));
     };
 
-    const updateLayerOpacity = (layerId: string, opacity: number) => {
-        if (playerRole !== 'editor') return; // Apenas editores podem alterar opacidade
 
-        setLayers(prev => prev.map(layer =>
-            layer.id === layerId ? { ...layer, opacity } : layer
-        ));
-    };
 
     const startEditingLayer = (layer: Layer) => {
         if (playerRole !== 'editor') return; // Apenas editores podem renomear camadas
@@ -1252,7 +1290,7 @@ const App: React.FC = () => {
                 name: layer.name,
                 visible: layer.visible,
                 locked: layer.locked,
-                opacity: layer.opacity,
+
                 canvasData: layer.canvas.toDataURL()
             })),
             messages: messages,
@@ -1290,7 +1328,7 @@ const App: React.FC = () => {
 
         setVideoLinks(prev => [...prev, videoLink]);
         socket?.emit('video-link', videoLink);
-        
+
         // Limpar campos
         setNewVideoTitle('');
         setNewVideoUrl('');
@@ -1300,7 +1338,7 @@ const App: React.FC = () => {
 
     const removeVideoLink = (id: string) => {
         if (playerRole !== 'editor') return;
-        
+
         setVideoLinks(prev => prev.filter(video => video.id !== id));
         socket?.emit('remove-video-link', id);
     };
@@ -1319,7 +1357,7 @@ const App: React.FC = () => {
             /^https?:\/\/(www\.)?(tiktok\.com)\/.+/,
             /^https?:\/\/(www\.)?(instagram\.com)\/.+/
         ];
-        
+
         return videoPatterns.some(pattern => pattern.test(url));
     };
 
@@ -1346,17 +1384,17 @@ const App: React.FC = () => {
 
     const importSession = () => {
         if (!importData.trim()) return;
-        
+
         setIsLoading(true);
-        
+
         try {
             const data = JSON.parse(importData);
-            
+
             // Validar estrutura básica
             if (!data.layers || !Array.isArray(data.layers)) {
                 throw new Error('Estrutura de briefing inválida');
             }
-            
+
             // Importar camadas
             const newLayers: Layer[] = [];
             data.layers.forEach((layerData: any) => {
@@ -1364,7 +1402,7 @@ const App: React.FC = () => {
                 canvas.width = 800;
                 canvas.height = 600;
                 const ctx = canvas.getContext('2d');
-                
+
                 if (ctx && layerData.canvasData) {
                     const img = new Image();
                     img.onload = () => {
@@ -1372,22 +1410,22 @@ const App: React.FC = () => {
                     };
                     img.src = layerData.canvasData;
                 }
-                
+
                 newLayers.push({
                     id: layerData.id || uuidv4(),
                     name: layerData.name || 'Setor Importado',
                     visible: layerData.visible !== undefined ? layerData.visible : true,
                     locked: layerData.locked !== undefined ? layerData.locked : false,
-                    opacity: layerData.opacity !== undefined ? layerData.opacity : 1,
+
                     canvas
                 });
             });
-            
+
             setLayers(newLayers);
             if (newLayers.length > 0) {
                 setActiveLayerId(newLayers[0].id);
             }
-            
+
             // Importar outros dados
             if (data.messages) setMessages(data.messages);
             if (data.tempLines) setTempLines(data.tempLines);
@@ -1395,11 +1433,11 @@ const App: React.FC = () => {
             if (data.zoom) setZoom(data.zoom);
             if (data.pan) setPan(data.pan);
             if (data.activeLayerId) setActiveLayerId(data.activeLayerId);
-            
+
             setShowImportModal(false);
             setImportData('');
             alert('Briefing de missão carregado com sucesso!');
-            
+
         } catch (error) {
             alert('Falha na decodificação do briefing. Verifique a integridade do arquivo.');
             console.error('Erro ao importar sessão:', error);
@@ -1520,6 +1558,18 @@ const App: React.FC = () => {
         }
     };
 
+    // Funções para controlar colapso das seções da toolbar
+    const toggleSection = (section: keyof typeof collapsedSections) => {
+        setCollapsedSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
+    };
+
+    const toggleToolbar = () => {
+        setShowToolbar(!showToolbar);
+    };
+
     // Auto-scroll para o final do chat
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -1534,48 +1584,48 @@ const App: React.FC = () => {
         socket.on('temp-line', handleRemoteTempLine);
         socket.on('layer-update', handleRemoteLayerUpdate);
         socket.on('chat-message', (message) => {
-          setMessages(prev => [...prev, message]);
+            setMessages(prev => [...prev, message]);
         });
         socket.on('player-name', (data) => {
-          setPlayers(prev => prev.map(p => 
-            p.id === data.playerId ? { ...p, name: data.name } : p
-          ));
+            setPlayers(prev => prev.map(p =>
+                p.id === data.playerId ? { ...p, name: data.name } : p
+            ));
         });
         socket.on('video-link', (videoLink: VideoLink) => {
-          setVideoLinks(prev => [...prev, videoLink]);
+            setVideoLinks(prev => [...prev, videoLink]);
         });
         socket.on('remove-video-link', (id: string) => {
-          setVideoLinks(prev => prev.filter(video => video.id !== id));
+            setVideoLinks(prev => prev.filter(video => video.id !== id));
         });
         socket.on('video-links-history', (videoLinks: VideoLink[]) => {
-          setVideoLinks(videoLinks);
+            setVideoLinks(videoLinks);
         });
 
         return () => {
-          socket.off('drawing');
-          socket.off('temp-line');
-          socket.off('layer-update');
-          socket.off('chat-message');
-          socket.off('player-name');
-          socket.off('video-link');
-          socket.off('remove-video-link');
-          socket.off('video-links-history');
+            socket.off('drawing');
+            socket.off('temp-line');
+            socket.off('layer-update');
+            socket.off('chat-message');
+            socket.off('player-name');
+            socket.off('video-link');
+            socket.off('remove-video-link');
+            socket.off('video-links-history');
         };
     }, [socket]);
 
     return (
         <div className="app">
             <header className="header">
-                <h1>⚔️ Quartel General Tático</h1>
-                
+                <h1>Quartel General Tático</h1>
+
                 <div className="header-tabs">
-                    <button 
+                    <button
                         className={`tab-button ${activeTab === 'canvas' ? 'active' : ''}`}
                         onClick={() => setActiveTab('canvas')}
                     >
                         🗺️ Mapa de Operações
                     </button>
-                    <button 
+                    <button
                         className={`tab-button ${activeTab === 'videos' ? 'active' : ''}`}
                         onClick={() => setActiveTab('videos')}
                     >
@@ -1585,686 +1635,689 @@ const App: React.FC = () => {
 
                 <div className="header-controls">
                     <div className="role-badge">
-                        {playerRole === 'editor' ? '✏️ Oficial de Operações' : '👁️ Observador Tático'}
+                        {playerRole === 'editor' ? 'Oficial de Operações' : 'Observador Tático'}
                     </div>
                     <button onClick={() => setShowPermissionModal(true)} className="share-btn">
                         🔗 Transmitir Coordenadas
                     </button>
                     <button onClick={() => setShowExportModal(true)} className="export-btn">
-                        💾 Registrar Operação
+                        💾 Registrar
                     </button>
                     <button onClick={() => setShowImportModal(true)} className="import-btn">
-                        📁 Carregar Briefing
+                        📁 Carregar
                     </button>
                 </div>
             </header>
 
             {activeTab === 'canvas' ? (
-              <>
-                {/* Canvas e ferramentas */}
-                <div className="main-content">
-                  <div 
-                    className="toolbar" 
-                    style={{ width: `${toolbarWidth}px` }}
-                  >
-                    <div className="tool-section">
-                      <h3>⚔️ Arsenal Tático</h3>
-                      <div className="tool-buttons">
-                        <button
-                          className={`tool-button ${currentTool === 'brush' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                          onClick={() => setCurrentTool('brush')}
-                          title="Marcador Tático"
-                          disabled={playerRole !== 'editor'}
+                <>
+                    {/* Canvas e ferramentas */}
+                    <div className="main-content">
+                        <div
+                            className={`toolbar ${showToolbar ? '' : 'collapsed'}`}
+                            style={{ width: showToolbar ? `${toolbarWidth}px` : '60px' }}
                         >
-                          ✏️
-                        </button>
-                        <button
-                          className={`tool-button ${currentTool === 'eraser' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                          onClick={() => setCurrentTool('eraser')}
-                          title="Neutralizador de Marcas"
-                          disabled={playerRole !== 'editor'}
-                        >
-                          🧽
-                        </button>
-                        <button
-                          className={`tool-button ${currentTool === 'icon' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                          onClick={() => setCurrentTool('icon')}
-                          title="Marcadores de Campo"
-                          disabled={playerRole !== 'editor'}
-                        >
-                          🎯
-                        </button>
-                        <button
-                          className={`tool-button ${currentTool === 'temp-line' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                          onClick={() => setCurrentTool('temp-line')}
-                          title="Traço de Reconhecimento"
-                          disabled={playerRole !== 'editor'}
-                        >
-                          ⚡
-                        </button>
-                        <button
-                          className={`tool-button ${currentTool === 'unit' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                          onClick={() => setCurrentTool('unit')}
-                          title="Efetivo de Combate"
-                          disabled={playerRole !== 'editor'}
-                        >
-                          ⚔️
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="tool-section">
-                      <h3>🎨 Identificação de Unidade</h3>
-                      <div className="color-picker">
-                        {colors.map((color) => (
-                          <div
-                            key={color}
-                            className={`color-option ${currentColor === color ? 'active' : ''}`}
-                            style={{ backgroundColor: color }}
-                            onClick={() => setCurrentColor(color)}
-                            title={`Cor: ${color}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="tool-section">
-                      <h3>📏 Calibre de Traço</h3>
-                      <div className="thickness-control">
-                        <input
-                          type="range"
-                          min="1"
-                          max="20"
-                          value={brushSize}
-                          onChange={(e) => setBrushSize(Number(e.target.value))}
-                          className="thickness-slider"
-                          disabled={playerRole !== 'editor'}
-                        />
-                        <span className="thickness-value">{brushSize}px</span>
-                      </div>
-                    </div>
-
-                    {currentTool === 'icon' && (
-                      <div className="tool-section">
-                        <h3>🎯 Marcadores de Campo</h3>
-                        <div className="icons-panel">
-                          {Object.entries(icons).map(([key, value]) => (
-                            <button
-                              key={key}
-                              className={`icon-button ${selectedIcon === key ? 'active' : ''}`}
-                              onClick={() => setSelectedIcon(key as IconType)}
-                              title={value}
-                              disabled={playerRole !== 'editor'}
-                            >
-                              {value}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {currentTool === 'unit' && (
-                      <div className="tool-section">
-                        <h3>⚔️ Efetivo de Combate</h3>
-                        <div className="units-panel">
-                          {Object.entries(pwUnitTypes).map(([key, unit]) => (
-                            <button
-                              key={key}
-                              className={`unit-button ${selectedUnitType === key ? 'active' : ''}`}
-                              onClick={() => setSelectedUnitType(key)}
-                              title={unit.description}
-                              disabled={playerRole !== 'editor'}
-                            >
-                              <div className="unit-icon">{unit.iconPath}</div>
-                              <div className="unit-name">{unit.name}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="tool-section">
-                      <h3>🔄 Ações de Campo</h3>
-                      <button
-                        className="tool-button"
-                        onClick={clearCanvas}
-                        disabled={playerRole !== 'editor'}
-                        title="Redefinir Campo"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Handle de redimensionamento da toolbar */}
-                  <div
-                    className="resize-handle resize-handle-toolbar"
-                    onMouseDown={() => setIsResizingToolbar(true)}
-                  />
-
-                  <div className="canvas-container">
-                    <canvas
-                      ref={canvasRef}
-                      width={800}
-                      height={600}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onWheel={handleWheel}
-                      onKeyDown={handleKeyDown}
-                      onKeyUp={handleKeyUp}
-                      tabIndex={0}
-                    />
-                    
-                    {/* Zoom controls */}
-                    <div className="zoom-controls">
-                      <button className="zoom-btn zoom-in" onClick={zoomIn} title="Zoom In (+)">➕</button>
-                      <button className="zoom-btn zoom-out" onClick={zoomOut} title="Zoom Out (-)">➖</button>
-                      <button className="zoom-btn zoom-reset" onClick={resetZoom} title="Reset Zoom (100%)">🎯</button>
-                      <div className="zoom-info">{Math.round(zoom * 100)}%</div>
-                    </div>
-                  </div>
-
-                  <div 
-                    className={`layers-panel ${showLayerManager ? 'expanded' : 'collapsed'}`}
-                    style={{ 
-                      width: showLayerManager ? `${layersPanelWidth}px` : '60px',
-                      minWidth: showLayerManager ? '250px' : '60px'
-                    }}
-                  >
-                    <div className="layers-header">
-                      <h3>{showLayerManager ? '🗺️ Setores de Operação' : '🗺️'}</h3>
-                      <div className="layers-controls">
-                        <button
-                          className="layer-control-btn"
-                          onClick={() => setShowLayerManager(!showLayerManager)}
-                          title={showLayerManager ? 'Comprimir' : 'Expandir'}
-                        >
-                          {showLayerManager ? '◀' : '▶'}
-                        </button>
-                        {showLayerManager && (
-                          <button
-                            className={`layer-control-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                            onClick={createLayer}
-                            title="Adicionar Setor"
-                            disabled={playerRole !== 'editor'}
-                          >
-                            ➕
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {showLayerManager && (
-                      <div className="layers-content">
-                        <div className="layers-list">
-                          {layers.map((layer, index) => (
-                            <div
-                              key={`${layer.id}-${index}`}
-                              className={`layer-item ${activeLayerId === layer.id ? 'active' : ''} ${layer.locked ? 'locked' : ''}`}
-                              draggable
-                              onDragStart={(e) => setDragLayerId(layer.id)}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                const fromIndex = layers.findIndex(l => l.id === dragLayerId);
-                                if (fromIndex !== -1) {
-                                  moveLayer(fromIndex, index);
-                                }
-                              }}
-                            >
-                              <div className="layer-visibility-toggle">
+                            <div className="toolbar-header">
+                                <h3>⚔️ Arsenal</h3>
                                 <button
-                                  className={`visibility-btn ${layer.visible ? 'visible' : 'hidden'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                  onClick={() => toggleLayerVisibility(layer.id)}
-                                  title={layer.visible ? 'Desativar Visibilidade' : 'Ativar Visibilidade'}
-                                  disabled={playerRole !== 'editor'}
+                                    className="toolbar-toggle-btn"
+                                    onClick={() => setShowToolbar(!showToolbar)}
+                                    title={showToolbar ? 'Minimizar' : 'Maximizar'}
                                 >
-                                  {layer.visible ? '👁️' : '🙈'}
+                                    {showToolbar ? '◀' : '▶'}
                                 </button>
-                              </div>
-
-                              <div className="layer-lock-toggle">
-                                <button
-                                  className={`lock-btn ${layer.locked ? 'locked' : 'unlocked'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                  onClick={() => toggleLayerLock(layer.id)}
-                                  title={layer.locked ? 'Liberar Setor' : 'Bloquear Setor'}
-                                  disabled={playerRole !== 'editor'}
-                                >
-                                  {layer.locked ? '🔒' : '🔓'}
-                                </button>
-                              </div>
-
-                              <div className="layer-info" onClick={() => setActiveLayerId(layer.id)}>
-                                <div className="layer-name">
-                                  {editingLayerId === layer.id ? (
-                                    <input
-                                      type="text"
-                                      value={editingLayerName}
-                                      onChange={(e) => setEditingLayerName(e.target.value)}
-                                      onBlur={saveLayerName}
-                                      onKeyPress={(e) => e.key === 'Enter' && saveLayerName()}
-                                      autoFocus
-                                    />
-                                  ) : (
-                                    <span onDoubleClick={() => startEditingLayer(layer)}>
-                                      {layer.name}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="layer-opacity">
-                                  <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={layer.opacity * 100}
-                                    onChange={(e) => updateLayerOpacity(layer.id, Number(e.target.value) / 100)}
-                                    className={`opacity-slider ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                    disabled={playerRole !== 'editor'}
-                                  />
-                                  <span className="opacity-value">{Math.round(layer.opacity * 100)}%</span>
-                                </div>
-                              </div>
-
-                              <div className="layer-actions">
-                                <button
-                                  className={`layer-edit-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                  onClick={() => startEditingLayer(layer)}
-                                  title="Reclassificar Setor"
-                                  disabled={playerRole !== 'editor'}
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  className={`layer-delete-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                  onClick={() => deleteLayer(layer.id)}
-                                  title="Desativar Setor"
-                                  disabled={playerRole !== 'editor'}
-                                >
-                                  🗑️
-                                </button>
-                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Chat */}
-                <div className="chat-container">
-                  <div className="chat-header">
-                    <h3>📡 Comunicações de Campo</h3>
-                    <button 
-                      className="chat-toggle-btn"
-                      onClick={() => setShowChat(!showChat)}
-                      title={showChat ? 'Ocultar' : 'Mostrar'}
-                    >
-                      {showChat ? '▼' : '▲'}
-                    </button>
-                  </div>
-
-                  {showChat && (
-                    <>
-                      {showNameInput ? (
-                        <div className="name-input-container">
-                          <p>Tudo pronto para o briefing de missão!</p>
-                          <p>Para iniciar, insira sua identificação de oficial:</p>
-                          <input
-                            type="text"
-                            value={playerName}
-                            onChange={(e) => setPlayerName(e.target.value)}
-                            placeholder="Sua identificação de oficial"
-                            className="name-input"
-                            maxLength={20}
-                          />
-                          <button 
-                            className="name-submit-btn"
-                            onClick={setPlayerNameHandler}
-                            disabled={!playerName.trim()}
-                          >
-                            Iniciar Briefing
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="chat-messages" ref={chatContainerRef}>
-                            {messages.map((message) => (
-                              <div key={message.id} className="chat-message">
-                                <div className="message-header">
-                                  <span 
-                                    className="player-name" 
-                                    style={{ color: message.playerColor }}
-                                  >
-                                    {message.playerName === playerName ? 'Oficial' : message.playerName}
-                                  </span>
-                                  <span className="message-time">
-                                    {new Date(message.timestamp).toLocaleTimeString()}
-                                  </span>
+                            {!showToolbar && (
+                                <div className="minimized-icons">
+                                    <button className="minimized-icon" title="Arsenal">⚔️</button>
+                                    <button className="minimized-icon" title="Identificação de Unidade">🎨</button>
+                                    <button className="minimized-icon" title="Calibre de Traço">📏</button>
+                                    <button className="minimized-icon" title="Efetivo de Combate">⚔️</button>
+                                    <button className="minimized-icon" title="Ações de Campo">🛠️</button>
                                 </div>
-                                <div className="message-text">{message.text}</div>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          <div className="chat-input-container">
-                            <input
-                              type="text"
-                              value={chatInput}
-                              onChange={(e) => setChatInput(e.target.value)}
-                              onKeyPress={handleChatKeyPress}
-                              placeholder="Insira sua comunicação..."
-                              className="chat-input"
-                              maxLength={200}
-                              disabled={playerRole !== 'editor'}
-                            />
-                            <button 
-                              className="chat-send-btn"
-                              onClick={sendMessage}
-                              disabled={!chatInput.trim() || playerRole !== 'editor'}
-                            >
-                              Transmitir
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* Lista de Oficiais Conectados */}
-                <div className="players-list">
-                  <h4>👥 Oficiais Conectados</h4>
-                  {players.map((player) => (
-                    <div key={player.id} className="player-item">
-                      <div 
-                        className="player-indicator" 
-                        style={{ backgroundColor: player.color }}
-                      />
-                      <span className="player-name">
-                        {player.name === playerName ? 'Oficial' : player.name}
-                      </span>
-                      <span className="player-role">
-                        {player.role === 'editor' ? '✏️' : '👁️'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Aba de Vídeos */}
-                <div className="videos-content">
-                  <div className="videos-header">
-                    <h2>📹 Centro de Inteligência</h2>
-                    {playerRole === 'editor' && (
-                      <button 
-                        className="add-video-btn"
-                        onClick={() => setShowVideoModal(true)}
-                      >
-                        ➕ Anexar Relatório
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="videos-list">
-                    {videoLinks.length === 0 ? (
-                      <div className="no-videos">
-                        <p>Nenhum relatório de inteligência disponível.</p>
-                        <p>Anexe relatórios de vídeo para análise tática e planejamento de missão.</p>
-                      </div>
-                    ) : (
-                      videoLinks.map((video) => (
-                        <div key={video.id} className="video-item">
-                          <div className="video-info">
-                            <div className="video-header">
-                              <h3>{video.title}</h3>
-                              <div className="video-meta">
-                                <span className="player-name" style={{ color: video.playerColor }}>
-                                  {video.playerName}
-                                </span>
-                                <span className="video-time">
-                                  {new Date(video.timestamp).toLocaleTimeString()}
-                                </span>
-                              </div>
-                            </div>
-                            {video.description && (
-                              <p className="video-description">{video.description}</p>
                             )}
-                            <div className="video-url">
-                              <a 
-                                href={video.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openVideoLink(video.url);
-                                }}
-                              >
-                                🔗 {video.url}
-                              </a>
+
+                            <div className="tool-section">
+                                <h3>⚔️ Arsenal Tático</h3>
+                                <div className="tool-buttons">
+                                    <button
+                                        className={`tool-button ${currentTool === 'brush' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                        onClick={() => setCurrentTool('brush')}
+                                        title="Marcador Tático"
+                                        disabled={playerRole !== 'editor'}
+                                    >
+                                        ✏️
+                                    </button>
+                                    <button
+                                        className={`tool-button ${currentTool === 'eraser' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                        onClick={() => setCurrentTool('eraser')}
+                                        title="Neutralizador de Marcas"
+                                        disabled={playerRole !== 'editor'}
+                                    >
+                                        🧽
+                                    </button>
+
+                                    <button
+                                        className={`tool-button ${currentTool === 'temp-line' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                        onClick={() => setCurrentTool('temp-line')}
+                                        title="Traço de Reconhecimento"
+                                        disabled={playerRole !== 'editor'}
+                                    >
+                                        ⚡
+                                    </button>
+                                    <button
+                                        className={`tool-button ${currentTool === 'unit' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                        onClick={() => setCurrentTool('unit')}
+                                        title="Efetivo de Combate"
+                                        disabled={playerRole !== 'editor'}
+                                    >
+                                        ⚔️
+                                    </button>
+                                </div>
                             </div>
-                          </div>
-                          
-                          {playerRole === 'editor' && (
-                            <button 
-                              className="remove-video-btn"
-                              onClick={() => removeVideoLink(video.id)}
-                              title="Descartar Relatório"
-                            >
-                              🗑️
-                            </button>
-                          )}
+
+                            <div className="tool-section">
+                                <h3>🎨 Identificação de Unidade</h3>
+                                <div className="color-picker">
+                                    {colors.map((color) => (
+                                        <div
+                                            key={color}
+                                            className={`color-option ${currentColor === color ? 'active' : ''}`}
+                                            style={{ backgroundColor: color }}
+                                            onClick={() => setCurrentColor(color)}
+                                            title={`Cor: ${color}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="tool-section">
+                                <h3>📏 Calibre de Traço</h3>
+                                <div className="thickness-control">
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="20"
+                                        value={brushSize}
+                                        onChange={(e) => setBrushSize(Number(e.target.value))}
+                                        className="thickness-slider"
+                                        disabled={playerRole !== 'editor'}
+                                    />
+                                    <span className="thickness-value">{brushSize}px</span>
+                                </div>
+                            </div>
+
+
+
+                            {currentTool === 'unit' && (
+                                <div className="tool-section">
+                                    <h3>⚔️ Efetivo de Combate</h3>
+                                    <div className="units-panel">
+                                        {Object.entries(pwUnitTypes).map(([key, unit]) => (
+                                            <button
+                                                key={key}
+                                                className={`unit-button ${selectedUnitType === key ? 'active' : ''}`}
+                                                onClick={() => setSelectedUnitType(key)}
+                                                title={unit.description}
+                                                disabled={playerRole !== 'editor'}
+                                            >
+                                                <div className="unit-icon">{unit.iconPath}</div>
+                                                <div className="unit-name">{unit.name}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="tool-section">
+                                <h3>🔄 Ações de Campo</h3>
+                                <button
+                                    className="tool-button"
+                                    onClick={clearCanvas}
+                                    disabled={playerRole !== 'editor'}
+                                    title="Redefinir Campo"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </>
+
+                        {/* Handle de redimensionamento da toolbar */}
+                        <div
+                            className="resize-handle resize-handle-toolbar"
+                            onMouseDown={() => setIsResizingToolbar(true)}
+                        />
+
+                        <div className="center-pane">
+                            <div className="canvas-container">
+                                <canvas
+                                    ref={canvasRef}
+                                    width={800}
+                                    height={600}
+                                    onMouseDown={startDrawing}
+                                    onMouseMove={draw}
+                                    onMouseUp={stopDrawing}
+                                    onMouseLeave={stopDrawing}
+                                    onWheel={handleWheel}
+                                    onKeyDown={handleKeyDown}
+                                    onKeyUp={handleKeyUp}
+                                    tabIndex={0}
+                                />
+
+                                {/* Zoom controls */}
+                                <div className="zoom-controls">
+                                    <button className="zoom-btn zoom-in" onClick={zoomIn} title="Zoom In (+)">➕</button>
+                                    <button className="zoom-btn zoom-out" onClick={zoomOut} title="Zoom Out (-)">➖</button>
+                                    <button className="zoom-btn zoom-reset" onClick={resetZoom} title="Reset Zoom (100%)">🎯</button>
+                                    <div className="zoom-info">{Math.round(zoom * 100)}%</div>
+                                </div>
+                            </div>
+
+
+                        </div>
+
+                        <div
+                            className={`right-sidebar ${showRightSidebar ? 'expanded' : 'collapsed'}`}
+                            style={{
+                                width: showRightSidebar ? `${layersPanelWidth}px` : '60px',
+                                minWidth: showRightSidebar ? '250px' : '60px'
+                            }}
+                        >
+                            <div className="right-sidebar-header">
+                                <h3>{showRightSidebar ? 'Painel de Operações' : '⚙️'}</h3>
+                                <div className="right-sidebar-controls">
+                                    <button
+                                        className="right-sidebar-control-btn"
+                                        onClick={() => setShowRightSidebar(!showRightSidebar)}
+                                        title={showRightSidebar ? 'Comprimir' : 'Expandir'}
+                                    >
+                                        {showRightSidebar ? '◀' : '▶'}
+                                    </button>
+                                    {showRightSidebar && activeRightTab === 'layers' && (
+                                        <button
+                                            className={`layer-control-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={createLayer}
+                                            title="Adicionar Setor"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            ➕
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {!showRightSidebar && (
+                                <div className="minimized-tabs">
+                                    <button
+                                        className={`minimized-tab ${activeRightTab === 'layers' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setShowRightSidebar(true);
+                                            setActiveRightTab('layers');
+                                        }}
+                                        title="Setores de Operação"
+                                    >
+                                        🗺️
+                                    </button>
+                                    <button
+                                        className={`minimized-tab ${activeRightTab === 'chat' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setShowRightSidebar(true);
+                                            setActiveRightTab('chat');
+                                        }}
+                                        title={`Comunicações de Campo (${players.length} oficiais)`}
+                                    >
+                                        📡{players.length > 0 ? `(${players.length})` : ''}
+                                    </button>
+                                </div>
+                            )}
+
+                            {showRightSidebar && (
+                                <div className="right-sidebar-tabs">
+                                    <button
+                                        className={`sidebar-tab ${activeRightTab === 'layers' ? 'active' : ''}`}
+                                        onClick={() => setActiveRightTab('layers')}
+                                    >
+                                        🗺️ Setores
+                                    </button>
+                                    <button
+                                        className={`sidebar-tab ${activeRightTab === 'chat' ? 'active' : ''}`}
+                                        onClick={() => setActiveRightTab('chat')}
+                                    >
+                                        📡 Comunicações ({players.length})
+                                    </button>
+                                </div>
+                            )}
+
+                            {showRightSidebar && activeRightTab === 'layers' && (
+                                <div className="layers-content">
+                                    <div className="layers-list">
+                                        {layers.map((layer, index) => (
+                                            <div
+                                                key={`${layer.id}-${index}`}
+                                                className={`layer-item ${activeLayerId === layer.id ? 'active' : ''} ${layer.locked ? 'locked' : ''}`}
+                                                draggable
+                                                onDragStart={(e) => setDragLayerId(layer.id)}
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    const fromIndex = layers.findIndex(l => l.id === dragLayerId);
+                                                    if (fromIndex !== -1) {
+                                                        moveLayer(fromIndex, index);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="layer-visibility-toggle">
+                                                    <button
+                                                        className={`visibility-btn ${layer.visible ? 'visible' : 'hidden'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                                        onClick={() => toggleLayerVisibility(layer.id)}
+                                                        title={layer.visible ? 'Desativar Visibilidade' : 'Ativar Visibilidade'}
+                                                        disabled={playerRole !== 'editor'}
+                                                    >
+                                                        {layer.visible ? '👁️' : '🙈'}
+                                                    </button>
+                                                </div>
+
+                                                <div className="layer-lock-toggle">
+                                                    <button
+                                                        className={`lock-btn ${layer.locked ? 'locked' : 'unlocked'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                                        onClick={() => toggleLayerLock(layer.id)}
+                                                        title={layer.locked ? 'Liberar Setor' : 'Bloquear Setor'}
+                                                        disabled={playerRole !== 'editor'}
+                                                    >
+                                                        {layer.locked ? '🔒' : '🔓'}
+                                                    </button>
+                                                </div>
+
+                                                <div className="layer-info" onClick={() => setActiveLayerId(layer.id)}>
+                                                    <div className="layer-name">
+                                                        {editingLayerId === layer.id ? (
+                                                            <input
+                                                                type="text"
+                                                                value={editingLayerName}
+                                                                onChange={(e) => setEditingLayerName(e.target.value)}
+                                                                onBlur={saveLayerName}
+                                                                onKeyPress={(e) => e.key === 'Enter' && saveLayerName()}
+                                                                autoFocus
+                                                            />
+                                                        ) : (
+                                                            <span onDoubleClick={() => startEditingLayer(layer)}>
+                                                                {layer.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+
+                                                </div>
+
+                                                <div className="layer-actions">
+                                                    <button
+                                                        className={`layer-edit-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                                        onClick={() => startEditingLayer(layer)}
+                                                        title="Reclassificar Setor"
+                                                        disabled={playerRole !== 'editor'}
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        className={`layer-delete-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                                        onClick={() => deleteLayer(layer.id)}
+                                                        title="Desativar Setor"
+                                                        disabled={playerRole !== 'editor'}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {showRightSidebar && activeRightTab === 'chat' && (
+                                <div className="chat-content">
+                                    {showNameInput ? (
+                                        <div className="name-input-container">
+                                            <p>Tudo pronto para o briefing de missão!</p>
+                                            <p>Para iniciar, insira sua identificação de oficial:</p>
+                                            <input
+                                                type="text"
+                                                value={playerName}
+                                                onChange={(e) => setPlayerName(e.target.value)}
+                                                placeholder="Sua identificação de oficial"
+                                                className="name-input"
+                                                maxLength={20}
+                                            />
+                                            <button
+                                                className="name-submit-btn"
+                                                onClick={setPlayerNameHandler}
+                                                disabled={!playerName.trim()}
+                                            >
+                                                Iniciar Briefing
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="chat-messages" ref={chatContainerRef}>
+                                                {messages.map((message) => (
+                                                    <div key={message.id} className="chat-message">
+                                                        <div className="message-header">
+                                                            <span
+                                                                className="player-name"
+                                                                style={{ color: message.playerColor }}
+                                                            >
+                                                                {message.playerName === playerName ? 'Oficial' : message.playerName}
+                                                            </span>
+                                                            <span className="message-time">
+                                                                {new Date(message.timestamp).toLocaleTimeString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="message-text">{message.text}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="chat-input-container">
+                                                <input
+                                                    type="text"
+                                                    value={chatInput}
+                                                    onChange={(e) => setChatInput(e.target.value)}
+                                                    onKeyPress={handleChatKeyPress}
+                                                    placeholder="Insira sua comunicação..."
+                                                    className="chat-input"
+                                                    maxLength={200}
+                                                    disabled={playerRole !== 'editor'}
+                                                />
+                                                <button
+                                                    className="chat-send-btn"
+                                                    onClick={sendMessage}
+                                                    disabled={!chatInput.trim() || playerRole !== 'editor'}
+                                                >
+                                                    Transmitir
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+
+
+
+                </>
+            ) : (
+                <>
+                    {/* Aba de Vídeos */}
+                    <div className="videos-content">
+                        <div className="videos-header">
+                            <h2>📹 Centro de Inteligência</h2>
+                            {playerRole === 'editor' && (
+                                <button
+                                    className="add-video-btn"
+                                    onClick={() => setShowVideoModal(true)}
+                                >
+                                    ➕ Anexar Relatório
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="videos-list">
+                            {videoLinks.length === 0 ? (
+                                <div className="no-videos">
+                                    <p>Nenhum relatório de inteligência disponível.</p>
+                                    <p>Anexe relatórios de vídeo para análise tática e planejamento de missão.</p>
+                                </div>
+                            ) : (
+                                videoLinks.map((video) => (
+                                    <div key={video.id} className="video-item">
+                                        <div className="video-info">
+                                            <div className="video-header">
+                                                <h3>{video.title}</h3>
+                                                <div className="video-meta">
+                                                    <span className="player-name" style={{ color: video.playerColor }}>
+                                                        {video.playerName}
+                                                    </span>
+                                                    <span className="video-time">
+                                                        {new Date(video.timestamp).toLocaleTimeString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {video.description && (
+                                                <p className="video-description">{video.description}</p>
+                                            )}
+                                            <div className="video-url">
+                                                <a
+                                                    href={video.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        openVideoLink(video.url);
+                                                    }}
+                                                >
+                                                    🔗 {video.url}
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        {playerRole === 'editor' && (
+                                            <button
+                                                className="remove-video-btn"
+                                                onClick={() => removeVideoLink(video.id)}
+                                                title="Descartar Relatório"
+                                            >
+                                                🗑️
+                                            </button>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </>
             )}
 
-        {/* Modal de Exportação */}
-        {showExportModal && (
-          <div className="export-modal">
-            <div className="modal-content">
-              <h2>💾 Registrar Operação</h2>
-              <p>Registre o estado atual da operação para futuras análises.</p>
+            {/* Modal de Exportação */}
+            {showExportModal && (
+                <div className="export-modal">
+                    <div className="modal-content">
+                        <h2>💾 Registrar Operação</h2>
+                        <p>Registre o estado atual da operação para futuras análises.</p>
 
-              <div className="export-info">
-                <p>Os seguintes itens serão registrados:</p>
-                <ul>
-                  <li>Todos os setores de operação e marcações táticas.</li>
-                  <li>Registro de comunicações.</li>
-                  <li>Parâmetros de visualização do mapa.</li>
-                  <li>Referências de inteligência.</li>
-                </ul>
-              </div>
-              
-              <div className="modal-actions">
-                <button 
-                  className="export-btn"
-                  onClick={exportSession}
-                >
-                  💾 Registrar Agora
-                </button>
-                <button className="cancel-btn" onClick={() => setShowExportModal(false)}>
-                  Abortar
-                </button>
-              </div>
-              <button className="close-modal-btn" onClick={() => setShowExportModal(false)}>
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
+                        <div className="export-info">
+                            <p>Os seguintes itens serão registrados:</p>
+                            <ul>
+                                <li>Todos os setores de operação e marcações táticas.</li>
+                                <li>Registro de comunicações.</li>
+                                <li>Parâmetros de visualização do mapa.</li>
+                                <li>Referências de inteligência.</li>
+                            </ul>
+                        </div>
 
-        {/* Modal de Importação */}
-        {showImportModal && (
-          <div className="import-modal">
-            <div className="modal-content">
-              <h2>📋 Carregar Briefing de Missão</h2>
-              <p>Carregue um briefing de missão salvo anteriormente.</p>
-
-              <div className="import-methods">
-                <div className="import-method">
-                  <h3>📁 Receber Transmissão</h3>
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileUpload}
-                    className="file-input"
-                  />
+                        <div className="modal-actions">
+                            <button
+                                className="export-btn"
+                                onClick={exportSession}
+                            >
+                                💾 Registrar Agora
+                            </button>
+                            <button className="cancel-btn" onClick={() => setShowExportModal(false)}>
+                                Abortar
+                            </button>
+                        </div>
+                        <button className="close-modal-btn" onClick={() => setShowExportModal(false)}>
+                            ✕
+                        </button>
+                    </div>
                 </div>
+            )}
 
-                <div className="import-method">
-                  <h3>📋 Decodificar Dados</h3>
-                  <textarea
-                    placeholder="Cole aqui os dados do briefing..."
-                    value={importData}
-                    onChange={(e) => setImportData(e.target.value)}
-                    className="import-textarea"
-                    rows={8}
-                  />
+            {/* Modal de Importação */}
+            {showImportModal && (
+                <div className="import-modal">
+                    <div className="modal-content">
+                        <h2>📋 Carregar Briefing de Missão</h2>
+                        <p>Carregue um briefing de missão salvo anteriormente.</p>
+
+                        <div className="import-methods">
+                            <div className="import-method">
+                                <h3>📁 Receber Transmissão</h3>
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={handleFileUpload}
+                                    className="file-input"
+                                />
+                            </div>
+
+                            <div className="import-method">
+                                <h3>📋 Decodificar Dados</h3>
+                                <textarea
+                                    placeholder="Cole aqui os dados do briefing..."
+                                    value={importData}
+                                    onChange={(e) => setImportData(e.target.value)}
+                                    className="import-textarea"
+                                    rows={8}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="modal-actions">
+                            <button
+                                className="import-btn"
+                                onClick={importSession}
+                                disabled={!importData.trim() || isLoading}
+                            >
+                                {isLoading ? '⏳ Decodificando...' : '📂 Iniciar Briefing'}
+                            </button>
+                            <button className="cancel-btn" onClick={() => {
+                                setShowImportModal(false);
+                                setImportData('');
+                            }}>
+                                Abortar
+                            </button>
+                        </div>
+                        <button className="close-modal-btn" onClick={() => {
+                            setShowImportModal(false);
+                            setImportData('');
+                        }}>
+                            ✕
+                        </button>
+                    </div>
                 </div>
-              </div>
-              
-              <div className="modal-actions">
-                <button 
-                  className="import-btn"
-                  onClick={importSession}
-                  disabled={!importData.trim() || isLoading}
-                >
-                  {isLoading ? '⏳ Decodificando...' : '📂 Iniciar Briefing'}
-                </button>
-                <button className="cancel-btn" onClick={() => {
-                  setShowImportModal(false);
-                  setImportData('');
-                }}>
-                  Abortar
-                </button>
-              </div>
-              <button className="close-modal-btn" onClick={() => {
-                setShowImportModal(false);
-                setImportData('');
-              }}>
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Modal de Adicionar Vídeo */}
-        {showVideoModal && (
-          <div className="video-modal">
-            <div className="modal-content">
-              <h2>📹 Anexar Relatório</h2>
-              <p>Adicione um relatório de vídeo para análise tática durante o planejamento.</p>
+            {/* Modal de Adicionar Vídeo */}
+            {showVideoModal && (
+                <div className="video-modal">
+                    <div className="modal-content">
+                        <h2>📹 Anexar Relatório</h2>
+                        <p>Adicione um relatório de vídeo para análise tática durante o planejamento.</p>
 
-              <div className="form-group">
-                <label htmlFor="video-title">Assunto do Relatório:</label>
-                <input
-                  id="video-title"
-                  type="text"
-                  placeholder="Ex: Análise de Posicionamento Inimigo"
-                  value={newVideoTitle}
-                  onChange={(e) => setNewVideoTitle(e.target.value)}
-                  className="form-input"
-                />
-              </div>
+                        <div className="form-group">
+                            <label htmlFor="video-title">Assunto do Relatório:</label>
+                            <input
+                                id="video-title"
+                                type="text"
+                                placeholder="Ex: Análise de Posicionamento Inimigo"
+                                value={newVideoTitle}
+                                onChange={(e) => setNewVideoTitle(e.target.value)}
+                                className="form-input"
+                            />
+                        </div>
 
-              <div className="form-group">
-                <label htmlFor="video-url">Localização do Relatório (URL):</label>
-                <input
-                  id="video-url"
-                  type="url"
-                  placeholder="https://..."
-                  value={newVideoUrl}
-                  onChange={(e) => setNewVideoUrl(e.target.value)}
-                  className="form-input"
-                />
-                {newVideoUrl && !validateVideoUrl(newVideoUrl) && (
-                  <div className="url-warning">
-                    Localização do relatório inválida ou de fonte não autorizada.
-                  </div>
-                )}
-              </div>
+                        <div className="form-group">
+                            <label htmlFor="video-url">Localização do Relatório (URL):</label>
+                            <input
+                                id="video-url"
+                                type="url"
+                                placeholder="https://..."
+                                value={newVideoUrl}
+                                onChange={(e) => setNewVideoUrl(e.target.value)}
+                                className="form-input"
+                            />
+                            {newVideoUrl && !validateVideoUrl(newVideoUrl) && (
+                                <div className="url-warning">
+                                    Localização do relatório inválida ou de fonte não autorizada.
+                                </div>
+                            )}
+                        </div>
 
-              <div className="form-group">
-                <label htmlFor="video-description">Observações do Oficial (Opcional):</label>
-                <textarea
-                  id="video-description"
-                  placeholder="Ex: Vídeo mostra posicionamento das forças inimigas na região norte"
-                  value={newVideoDescription}
-                  onChange={(e) => setNewVideoDescription(e.target.value)}
-                  className="form-textarea"
-                  rows={3}
-                />
-              </div>
+                        <div className="form-group">
+                            <label htmlFor="video-description">Observações do Oficial (Opcional):</label>
+                            <textarea
+                                id="video-description"
+                                placeholder="Ex: Vídeo mostra posicionamento das forças inimigas na região norte"
+                                value={newVideoDescription}
+                                onChange={(e) => setNewVideoDescription(e.target.value)}
+                                className="form-textarea"
+                                rows={3}
+                            />
+                        </div>
 
-              <div className="modal-actions">
-                <button 
-                  className="add-btn"
-                  onClick={addVideoLink}
-                  disabled={!newVideoTitle.trim() || !newVideoUrl.trim()}
-                >
-                  ➕ Anexar
-                </button>
-                <button className="cancel-btn" onClick={() => setShowVideoModal(false)}>
-                  Abortar
-                </button>
-              </div>
-              <button className="close-modal-btn" onClick={() => setShowVideoModal(false)}>
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Permissões */}
-        {showPermissionModal && (
-          <div className="permission-modal">
-            <div className="modal-content">
-              <h2>🔗 Transmitir Coordenadas</h2>
-              <p>Compartilhe o acesso ao mapa de operações com outros oficiais.</p>
-
-              <div className="permission-options">
-                <div 
-                  className={`permission-option ${selectedPermission === 'editor' ? 'active' : ''}`}
-                  onClick={() => setSelectedPermission('editor')}
-                >
-                  <h3>✏️ Oficial de Operações</h3>
-                  <p>Pode desenhar, editar setores, gerenciar operações e transmitir comunicações.</p>
+                        <div className="modal-actions">
+                            <button
+                                className="add-btn"
+                                onClick={addVideoLink}
+                                disabled={!newVideoTitle.trim() || !newVideoUrl.trim()}
+                            >
+                                ➕ Anexar
+                            </button>
+                            <button className="cancel-btn" onClick={() => setShowVideoModal(false)}>
+                                Abortar
+                            </button>
+                        </div>
+                        <button className="close-modal-btn" onClick={() => setShowVideoModal(false)}>
+                            ✕
+                        </button>
+                    </div>
                 </div>
-                
-                <div 
-                  className={`permission-option ${selectedPermission === 'viewer' ? 'active' : ''}`}
-                  onClick={() => setSelectedPermission('viewer')}
-                >
-                  <h3>👁️ Observador Tático</h3>
-                  <p>Pode visualizar o mapa, setores e comunicações, mas não pode fazer alterações.</p>
-                </div>
-              </div>
+            )}
 
-              <div className="modal-actions">
-                <button 
-                  className="share-btn"
-                  onClick={() => generateLink(selectedPermission)}
-                >
-                  🔗 Gerar Link
-                </button>
-                <button className="cancel-btn" onClick={() => setShowPermissionModal(false)}>
-                  Abortar
-                </button>
-              </div>
-              <button className="close-modal-btn" onClick={() => setShowPermissionModal(false)}>
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
+            {/* Modal de Permissões */}
+            {showPermissionModal && (
+                <div className="permission-modal">
+                    <div className="modal-content">
+                        <h2>🔗 Transmitir Coordenadas</h2>
+                        <p>Compartilhe o acesso ao mapa de operações com outros oficiais.</p>
+
+                        <div className="permission-options">
+                            <div
+                                className={`permission-option ${selectedPermission === 'editor' ? 'active' : ''}`}
+                                onClick={() => setSelectedPermission('editor')}
+                            >
+                                <h3>✏️ Oficial de Operações</h3>
+                                <p>Pode desenhar, editar setores, gerenciar operações e transmitir comunicações.</p>
+                            </div>
+
+                            <div
+                                className={`permission-option ${selectedPermission === 'viewer' ? 'active' : ''}`}
+                                onClick={() => setSelectedPermission('viewer')}
+                            >
+                                <h3>👁️ Observador Tático</h3>
+                                <p>Pode visualizar o mapa, setores e comunicações, mas não pode fazer alterações.</p>
+                            </div>
+                        </div>
+
+                        <div className="modal-actions">
+                            <button
+                                className="share-btn"
+                                onClick={() => generateLink(selectedPermission)}
+                            >
+                                🔗 Gerar Link
+                            </button>
+                            <button className="cancel-btn" onClick={() => setShowPermissionModal(false)}>
+                                Abortar
+                            </button>
+                        </div>
+                        <button className="close-modal-btn" onClick={() => setShowPermissionModal(false)}>
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

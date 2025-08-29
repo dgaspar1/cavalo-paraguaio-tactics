@@ -17,6 +17,8 @@
   --text-secondary: #b0b0b0; /* Cinza claro */
   --text-muted: #808080; /* Cinza médio */
   --text-inverse: #1a1a1a; /* Para texto em fundos claros */
+  --text-dark: #1a1a1a; /* Texto escuro para fundos claros */
+  --text-light: #e0e0e0; /* Texto claro para fundos escuros */
   
   /* Cores de Borda */
   --border-color: #404040; /* Cinza escuro */
@@ -45,6 +47,10 @@
   --transparency-medium: rgba(255, 255, 255, 0.1);
   --transparency-heavy: rgba(255, 255, 255, 0.15);
   
+  /* Cores de Background adicionais */
+  --background-light: #f0f0f0;
+  --background-medium: #e0e0e0;
+  
   /* Bordas e Raios */
   --border-radius-small: 4px;
   --border-radius-medium: 8px;
@@ -64,13 +70,13 @@
   --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   
   /* Tamanhos de Fonte */
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 20px;
-  --font-size-xxl: 24px;
-  --font-size-title: 28px;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 20px;
+  --font-size-title: 24px;
   
   /* Pesos de Fonte */
   --font-weight-light: 300;
@@ -110,10 +116,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-}
-
-* {
-  box-sizing: border-box;
 }
 
 /* Scrollbar personalizada estilo macOS */
@@ -157,7 +159,7 @@ body {
 }
 
 .header h1 {
-  color: var(--primary-color);
+  color: var(--text-primary);
   margin: 0;
   font-size: 1.8rem;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
@@ -171,7 +173,7 @@ body {
 
 .session-link {
   background: var(--primary-color);
-  color: var(--text-dark);
+  color: var(--text-light);
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 4px;
@@ -182,6 +184,7 @@ body {
 
 .session-link:hover {
   background: #ffed4e;
+  color: var(--text-dark);
   transform: translateY(-2px);
 }
 
@@ -210,7 +213,7 @@ body {
 
 .tool-section h3 {
   margin: 0 0 0.5rem 0;
-  color: var(--primary-color);
+  color: var(--text-primary);
   font-size: 1rem;
 }
 
@@ -221,9 +224,9 @@ body {
 }
 
 .tool-button {
-  background: var(--background-medium);
+  background: var(--bg-secondary);
   border: 2px solid var(--border-color);
-  color: var(--text-light);
+  color: var(--text-primary);
   padding: 0.5rem;
   border-radius: 4px;
   cursor: pointer;
@@ -235,14 +238,14 @@ body {
 }
 
 .tool-button:hover {
-  border-color: var(--primary-color);
-  background: var(--background-light);
+  border-color: var(--accent-color);
+  background: var(--bg-tertiary);
 }
 
 .tool-button.active {
-  border-color: var(--primary-color);
-  background: var(--primary-color);
-  color: var(--text-dark);
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: var(--text-primary);
 }
 
 .color-picker {
@@ -265,7 +268,7 @@ body {
 }
 
 .color-option.active {
-  border-color: var(--text-light);
+  border-color: var(--text-primary);
   transform: scale(1.2);
 }
 
@@ -290,11 +293,12 @@ body {
   border-radius: 8px;
   padding: 1rem;
   min-width: 200px;
+  z-index: var(--z-fixed);
 }
 
 .players-list h4 {
   margin: 0 0 0.5rem 0;
-  color: var(--primary-color);
+  color: var(--text-primary);
 }
 
 .player-item {
@@ -302,6 +306,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.25rem;
+  color: var(--text-primary);
 }
 
 .player-indicator {
@@ -318,9 +323,9 @@ body {
 }
 
 .icon-button {
-  background: var(--background-medium);
+  background: var(--bg-secondary);
   border: 2px solid var(--border-color);
-  color: var(--text-light);
+  color: var(--text-primary);
   padding: 0.5rem;
   border-radius: 4px;
   cursor: pointer;
@@ -329,14 +334,15 @@ body {
 }
 
 .icon-button:hover {
-  border-color: var(--primary-color);
-  background: var(--background-light);
+  border-color: var(--accent-color);
+  background: var(--bg-tertiary);
 }
 
 .slider-container {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  color: var(--text-primary);
 }
 
 .slider {
@@ -354,7 +360,7 @@ body {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--primary-color);
+  background: var(--accent-color);
   cursor: pointer;
 }
 
@@ -362,7 +368,7 @@ body {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--primary-color);
+  background: var(--accent-color);
   cursor: pointer;
   border: none;
 } 
