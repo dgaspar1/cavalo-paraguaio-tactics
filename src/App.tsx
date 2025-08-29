@@ -42,6 +42,17 @@ interface TempLine {
     }>;
 }
 
+interface VideoLink {
+    id: string;
+    playerId: string;
+    playerName: string;
+    playerColor: string;
+    title: string;
+    url: string;
+    timestamp: number;
+    description?: string;
+}
+
 type Tool = 'brush' | 'eraser' | 'text' | 'icon' | 'temp-line' | 'unit';
 type IconType = 'mob' | 'npc' | 'resource' | 'boss' | 'portal' | 'quest';
 
@@ -93,6 +104,12 @@ const App: React.FC = () => {
     const [showImportModal, setShowImportModal] = useState<boolean>(false);
     const [importData, setImportData] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [activeTab, setActiveTab] = useState<'canvas' | 'videos'>('canvas');
+    const [videoLinks, setVideoLinks] = useState<VideoLink[]>([]);
+    const [newVideoTitle, setNewVideoTitle] = useState<string>('');
+    const [newVideoUrl, setNewVideoUrl] = useState<string>('');
+    const [newVideoDescription, setNewVideoDescription] = useState<string>('');
+    const [showVideoModal, setShowVideoModal] = useState<boolean>(false);
 
     // Redimensionamento
     const [toolbarWidth, setToolbarWidth] = useState<number>(280);
@@ -132,101 +149,101 @@ const App: React.FC = () => {
     const pwUnitTypes = {
         // Tanks
         tank: {
-            name: 'Tank',
+            name: 'Tank (PT)',
             iconPath: '/icones_pw_180/classe_guerreiro.png',
-            description: 'Unidade de defesa e proteção',
+            description: 'Unidade de linha de frente, absorve dano.',
             color: '#4A90E2'
         },
         // DPS
         assassin: {
-            name: 'Assassino',
+            name: 'Assassino (ATK)',
             iconPath: '/icones_pw_180/classe_assassino.png',
-            description: 'Dano furtivo e crítico',
+            description: 'Especialista em dano furtivo e crítico.',
             color: '#D0021B'
         },
         swordsman: {
-            name: 'Espadachim',
+            name: 'Espadachim (ATK)',
             iconPath: '/icones_pw_180/classe_espadachim.png',
-            description: 'Dano corpo a corpo',
+            description: 'Dano corpo a corpo e combate direto.',
             color: '#9013FE'
         },
         // Healers
         healer: {
-            name: 'Curandeiro',
+            name: 'Curandeiro (APOIO)',
             iconPath: '/icones_pw_180/classe_espirito_alado.png',
-            description: 'Cura e suporte',
+            description: 'Cura e suporte vital para a equipe.',
             color: '#7ED321'
         },
         // Support
         support: {
-            name: 'Suporte',
+            name: 'Suporte (APOIO)',
             iconPath: '/icones_pw_180/classe_fada.png',
-            description: 'Buffs e debuffs',
+            description: 'Buffs, debuffs e controle de campo.',
             color: '#F5A623'
         },
         bard: {
-            name: 'Bardo',
+            name: 'Bardo (APOIO)',
             iconPath: '/icones_pw_180/bardo_normal.ico',
-            description: 'Música e inspiração',
+            description: 'Música e inspiração para aliados.',
             color: '#BD10E0'
         },
         // Ranged
         archer: {
-            name: 'Arqueiro',
+            name: 'Arqueiro (CT)',
             iconPath: '/icones_pw_180/classe_arqueiro_alado.png',
-            description: 'Dano à distância',
+            description: 'Dano à distância e precisão letal.',
             color: '#50E3C2'
         },
         // Magic
         mage: {
-            name: 'Mago',
+            name: 'Mago (CT)',
             iconPath: '/icones_pw_180/classe_mago.png',
-            description: 'Magia elemental',
+            description: 'Magia elemental devastadora.',
             color: '#4A90E2'
         },
         warlock: {
-            name: 'Bruxo',
+            name: 'Bruxo (CT)',
             iconPath: '/icones_pw_180/classe_bruxo.png',
-            description: 'Magia sombria',
+            description: 'Magia sombria e maldições.',
             color: '#8B572A'
         },
         lunar: {
-            name: 'Imortal Lunar',
+            name: 'Imortal Lunar (CT)',
             iconPath: '/icones_pw_180/classe_imortal_lunar.png',
-            description: 'Magia lunar',
+            description: 'Poderes lunares e controle de energia.',
             color: '#F8E71C'
         },
         // Agile
         agile: {
-            name: 'Ágil',
+            name: 'Ágil (CC)',
             iconPath: '/icones_pw_180/classe_macaco.png',
-            description: 'Velocidade e esquiva',
+            description: 'Velocidade e manobras evasivas.',
             color: '#F5A623'
         },
         wasp: {
-            name: 'Vespa',
+            name: 'Vespa (CC)',
             iconPath: '/icones_pw_180/classe_vespa_alada.png',
-            description: 'Ataque rápido',
+            description: 'Ataques rápidos e mobilidade aérea.',
             color: '#D0021B'
         },
         // Control
         controller: {
-            name: 'Controlador',
+            name: 'Controlador (CC)',
             iconPath: '/icones_pw_180/classe_espirito_encantador.png',
-            description: 'Controle de multidões',
+            description: 'Especialista em controle de multidões.',
             color: '#9013FE'
         },
         // Special
         divine: {
-            name: 'Máquina Divina',
+            name: 'Máquina Divina (CC)',
             iconPath: '/icones_pw_180/classe_maquina_divina.png',
-            description: 'Tecnologia avançada',
+            description: 'Suporte tático e tecnologia avançada.',
             color: '#50E3C2'
         },
         beast: {
-            name: 'Bestial',
+            name: 'Bestial (PT)',
             iconPath: '/icones_pw_180/classe_bestial.png',
-            description: 'Força bruta',
+            description: 'Força bruta e resistência em combate.',
             color: '#8B572A'
         }
     };
@@ -725,104 +742,62 @@ const App: React.FC = () => {
         redrawCanvas();
     }, [layers, tempLines]);
 
-    const handleRemoteDrawing = (data: DrawingData) => {
-        console.log('🔄 HANDLE-REMOTE-DRAWING:', data);
-
-        if (data.type === 'temp-line') {
-            console.log('⚡ Processando linha temporária...');
-            // Adicionar linha temporária
-            setTempLines(prev => {
-                const existingLine = prev.find(line => line.id === data.data.lineId);
-
-                if (existingLine) {
-                    // Adicionar novo segmento à linha existente
-                    existingLine.segments.push({
-                        x: data.data.x,
-                        y: data.data.y,
-                        timestamp: Date.now()
-                    });
-                    return [...prev];
-                } else {
-                    // Criar nova linha
-                    return [...prev, {
-                        id: data.data.lineId,
-                        playerId: data.playerId,
-                        startX: data.data.x,
-                        startY: data.data.y,
-                        endX: data.data.x,
-                        endY: data.data.y,
-                        color: data.data.color,
-                        timestamp: Date.now(),
-                        segments: [{
-                            x: data.data.x,
-                            y: data.data.y,
-                            timestamp: Date.now()
-                        }]
-                    }];
+    const handleRemoteDrawing = (data: any) => {
+        if (data.layerId && data.data) {
+            const layer = layers.find(l => l.id === data.layerId);
+            if (layer && layer.canvas) {
+                const ctx = layer.canvas.getContext('2d');
+                if (ctx) {
+                    if (data.data.type === 'icon') {
+                        const icon = icons[data.data.iconType as IconType];
+                        if (icon) {
+                            const img = new Image();
+                            img.onload = () => {
+                                ctx.drawImage(img, data.data.x - 15, data.data.y - 15, 30, 30);
+                                redrawCanvas();
+                            };
+                            img.src = icon;
+                        }
+                    } else {
+                        ctx.beginPath();
+                        ctx.moveTo(data.data.startX, data.data.startY);
+                        ctx.lineTo(data.data.endX, data.data.endY);
+                        ctx.strokeStyle = data.data.color;
+                        ctx.lineWidth = data.data.width;
+                        ctx.stroke();
+                        redrawCanvas();
+                    }
                 }
-            });
-            return;
+            }
         }
+    };
 
-        console.log(`🔍 Procurando camada ${data.layerId}...`);
-        console.log(`📋 Camadas locais disponíveis:`, layers.map(l => ({ id: l.id, name: l.name })));
-        const layer = layers.find(l => l.id === data.layerId);
-        if (!layer || layer.locked) {
-            console.log(`❌ Camada ${data.layerId} não encontrada ou bloqueada`);
-            return;
+    const handleRemoteTempLine = (data: any) => {
+        const tempLine: TempLine = {
+            id: data.id,
+            playerId: data.playerId,
+            startX: data.startX,
+            startY: data.startY,
+            endX: data.endX,
+            endY: data.endY,
+            color: data.color,
+            timestamp: data.timestamp,
+            segments: data.segments || []
+        };
+        
+        setTempLines(prev => [...prev, tempLine]);
+    };
+
+    const handleRemoteLayerUpdate = (data: any) => {
+        if (data.type === 'create') {
+            setLayers(prev => [...prev, data.layer]);
+        } else if (data.type === 'delete') {
+            setLayers(prev => prev.filter(l => l.id !== data.layerId));
+        } else if (data.type === 'update') {
+            setLayers(prev => prev.map(l => 
+                l.id === data.layerId ? { ...l, ...data.updates } : l
+            ));
         }
-
-        console.log(`✅ Camada ${data.layerId} encontrada`);
-        const layerContext = layer.canvas.getContext('2d');
-        if (!layerContext) {
-            console.log(`❌ Contexto da camada ${data.layerId} não disponível`);
-            return;
-        }
-
-        switch (data.type) {
-            case 'draw':
-                layerContext.beginPath();
-                layerContext.moveTo(data.data.startX, data.data.startY);
-                layerContext.lineTo(data.data.endX, data.data.endY);
-
-                // Verificar se é uma operação de borracha
-                if (data.data.isEraser) {
-                    layerContext.globalCompositeOperation = 'destination-out';
-                    layerContext.strokeStyle = 'rgba(0,0,0,1)';
-                } else {
-                    layerContext.globalCompositeOperation = 'source-over';
-                    layerContext.strokeStyle = data.data.color || currentColor;
-                }
-
-                layerContext.stroke();
-                break;
-            case 'clear':
-                layerContext.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-                break;
-            case 'icon':
-                layerContext.font = '24px Arial';
-                layerContext.fillText(icons[data.data.iconType as IconType], data.data.x, data.data.y);
-                break;
-            case 'unit':
-                const unitType = pwUnitTypes[data.data.iconType as keyof typeof pwUnitTypes];
-                if (unitType && loadedIcons[data.data.iconType]) {
-                    const iconSize = 32;
-                    layerContext.drawImage(
-                        loadedIcons[data.data.iconType],
-                        data.data.x - iconSize / 2,
-                        data.data.y - iconSize / 2,
-                        iconSize,
-                        iconSize
-                    );
-
-                    layerContext.font = '12px Arial';
-                    layerContext.fillStyle = '#000';
-                    layerContext.fillText(unitType.name, data.data.x, data.data.y + iconSize / 2 + 15);
-                }
-                break;
-        }
-
-        redrawCanvas();
     };
 
     // Função para sincronizar estado das camadas
@@ -1258,7 +1233,7 @@ const App: React.FC = () => {
         const link = `${baseUrl}?session=${sessionId}&role=${permission}`;
         navigator.clipboard.writeText(link);
         setShowPermissionModal(false);
-        alert(`Link de ${permission === 'editor' ? 'Editor' : 'Visualizador'} copiado!`);
+        alert(`Link de ${permission === 'editor' ? 'Oficial de Operações' : 'Observador Tático'} copiado!`);
     };
 
     // Funções de exportação e importação
@@ -1267,9 +1242,9 @@ const App: React.FC = () => {
             sessionId,
             timestamp: Date.now(),
             metadata: {
-                name: `Sessão Cavalo Paraguayo Tactics - ${new Date().toLocaleString()}`,
+                name: `Operação Cavalo Paraguayo - ${new Date().toLocaleString()}`,
                 version: '1.0',
-                exportedBy: playerName || 'Usuário',
+                exportedBy: playerName || 'Oficial',
                 playerRole
             },
             layers: layers.map(layer => ({
@@ -1292,68 +1267,142 @@ const App: React.FC = () => {
 
         const link = document.createElement('a');
         link.href = URL.createObjectURL(dataBlob);
-        link.download = `cavalo-paraguayo-tatics-session-${sessionId.slice(0, 8)}.json`;
+        link.download = `operacao-cavalo-paraguayo-${sessionId.slice(0, 8)}.json`;
         link.click();
 
         setShowExportModal(false);
-        alert('Sessão exportada com sucesso!');
+        alert('Operação registrada com sucesso!');
+    };
+
+    const addVideoLink = () => {
+        if (!newVideoTitle.trim() || !newVideoUrl.trim()) return;
+
+        const videoLink: VideoLink = {
+            id: uuidv4(),
+            playerId: socket?.id || playerId.current, // Use socket.id if available, otherwise playerId.current
+            playerName: playerName || 'Jogador',
+            playerColor: currentColor,
+            title: newVideoTitle.trim(),
+            url: newVideoUrl.trim(),
+            timestamp: Date.now(),
+            description: newVideoDescription.trim() || undefined
+        };
+
+        setVideoLinks(prev => [...prev, videoLink]);
+        socket?.emit('video-link', videoLink);
+        
+        // Limpar campos
+        setNewVideoTitle('');
+        setNewVideoUrl('');
+        setNewVideoDescription('');
+        setShowVideoModal(false);
+    };
+
+    const removeVideoLink = (id: string) => {
+        if (playerRole !== 'editor') return;
+        
+        setVideoLinks(prev => prev.filter(video => video.id !== id));
+        socket?.emit('remove-video-link', id);
+    };
+
+    const openVideoLink = (url: string) => {
+        window.open(url, '_blank');
+    };
+
+    const validateVideoUrl = (url: string): boolean => {
+        const videoPatterns = [
+            /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/,
+            /^https?:\/\/(www\.)?(twitch\.tv)\/.+/,
+            /^https?:\/\/(www\.)?(vimeo\.com)\/.+/,
+            /^https?:\/\/(www\.)?(dailymotion\.com)\/.+/,
+            /^https?:\/\/(www\.)?(bilibili\.com)\/.+/,
+            /^https?:\/\/(www\.)?(tiktok\.com)\/.+/,
+            /^https?:\/\/(www\.)?(instagram\.com)\/.+/
+        ];
+        
+        return videoPatterns.some(pattern => pattern.test(url));
+    };
+
+    const handleWheel = (e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = Math.max(0.1, Math.min(5, zoom * delta));
+            setZoom(newZoom);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Control' || e.key === 'Meta') {
+            setIsPanning(true);
+        }
+    };
+
+    const handleKeyUp = (e: React.KeyboardEvent) => {
+        if (e.key === 'Control' || e.key === 'Meta') {
+            setIsPanning(false);
+        }
     };
 
     const importSession = () => {
-        if (!importData.trim()) {
-            alert('Por favor, cole os dados da sessão.');
-            return;
-        }
-
+        if (!importData.trim()) return;
+        
+        setIsLoading(true);
+        
         try {
-            setIsLoading(true);
-            const sessionData = JSON.parse(importData);
-
-            // Validar estrutura do arquivo
-            if (!sessionData.layers || !sessionData.messages || !sessionData.metadata) {
-                throw new Error('Formato de arquivo inválido');
+            const data = JSON.parse(importData);
+            
+            // Validar estrutura básica
+            if (!data.layers || !Array.isArray(data.layers)) {
+                throw new Error('Estrutura de briefing inválida');
             }
-
-            // Carregar camadas
-            const importedLayers: Layer[] = sessionData.layers.map((layerData: any) => {
+            
+            // Importar camadas
+            const newLayers: Layer[] = [];
+            data.layers.forEach((layerData: any) => {
                 const canvas = document.createElement('canvas');
                 canvas.width = 800;
                 canvas.height = 600;
-
-                const img = new Image();
-                img.onload = () => {
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) {
+                const ctx = canvas.getContext('2d');
+                
+                if (ctx && layerData.canvasData) {
+                    const img = new Image();
+                    img.onload = () => {
                         ctx.drawImage(img, 0, 0);
-                    }
-                };
-                img.src = layerData.canvasData;
-
-                return {
-                    id: layerData.id,
-                    name: layerData.name,
-                    visible: layerData.visible,
-                    locked: layerData.locked,
-                    opacity: layerData.opacity,
+                    };
+                    img.src = layerData.canvasData;
+                }
+                
+                newLayers.push({
+                    id: layerData.id || uuidv4(),
+                    name: layerData.name || 'Setor Importado',
+                    visible: layerData.visible !== undefined ? layerData.visible : true,
+                    locked: layerData.locked !== undefined ? layerData.locked : false,
+                    opacity: layerData.opacity !== undefined ? layerData.opacity : 1,
                     canvas
-                };
+                });
             });
-
-            // Atualizar estado
-            setLayers(importedLayers);
-            setMessages(sessionData.messages || []);
-            setTempLines(sessionData.tempLines || []);
-            setZoom(sessionData.zoom || 1);
-            setPan(sessionData.pan || { x: 0, y: 0 });
-            setActiveLayerId(sessionData.activeLayerId || importedLayers[0]?.id || '');
-
+            
+            setLayers(newLayers);
+            if (newLayers.length > 0) {
+                setActiveLayerId(newLayers[0].id);
+            }
+            
+            // Importar outros dados
+            if (data.messages) setMessages(data.messages);
+            if (data.tempLines) setTempLines(data.tempLines);
+            if (data.videoLinks) setVideoLinks(data.videoLinks);
+            if (data.zoom) setZoom(data.zoom);
+            if (data.pan) setPan(data.pan);
+            if (data.activeLayerId) setActiveLayerId(data.activeLayerId);
+            
             setShowImportModal(false);
             setImportData('');
-            alert('Sessão importada com sucesso!');
-
+            alert('Briefing de missão carregado com sucesso!');
+            
         } catch (error) {
+            alert('Falha na decodificação do briefing. Verifique a integridade do arquivo.');
             console.error('Erro ao importar sessão:', error);
-            alert('Erro ao importar sessão. Verifique se o arquivo é válido.');
         } finally {
             setIsLoading(false);
         }
@@ -1478,591 +1527,744 @@ const App: React.FC = () => {
         }
     }, [messages]);
 
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('drawing', handleRemoteDrawing);
+        socket.on('temp-line', handleRemoteTempLine);
+        socket.on('layer-update', handleRemoteLayerUpdate);
+        socket.on('chat-message', (message) => {
+          setMessages(prev => [...prev, message]);
+        });
+        socket.on('player-name', (data) => {
+          setPlayers(prev => prev.map(p => 
+            p.id === data.playerId ? { ...p, name: data.name } : p
+          ));
+        });
+        socket.on('video-link', (videoLink: VideoLink) => {
+          setVideoLinks(prev => [...prev, videoLink]);
+        });
+        socket.on('remove-video-link', (id: string) => {
+          setVideoLinks(prev => prev.filter(video => video.id !== id));
+        });
+        socket.on('video-links-history', (videoLinks: VideoLink[]) => {
+          setVideoLinks(videoLinks);
+        });
+
+        return () => {
+          socket.off('drawing');
+          socket.off('temp-line');
+          socket.off('layer-update');
+          socket.off('chat-message');
+          socket.off('player-name');
+          socket.off('video-link');
+          socket.off('remove-video-link');
+          socket.off('video-links-history');
+        };
+    }, [socket]);
+
     return (
         <div className="app">
             <header className="header">
-                <h1>🎮 Cavalo Paraguayo Tactics</h1>
-                <div className="session-info">
-                    <span>Sessão: {sessionId.slice(0, 8)}...</span>
-                    <span className={`role-badge ${playerRole}`}>
-                        {playerRole === 'editor' ? '✏️ Editor' : '👁️ Visualizador'}
-                    </span>
-                    <button className="session-link" onClick={copySessionLink}>
-                        📋 Compartilhar Link
+                <h1>⚔️ Quartel General Tático</h1>
+                
+                <div className="header-tabs">
+                    <button 
+                        className={`tab-button ${activeTab === 'canvas' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('canvas')}
+                    >
+                        🗺️ Mapa de Operações
                     </button>
-                    <button className="session-btn" onClick={() => setShowExportModal(true)}>
-                        💾 Exportar
+                    <button 
+                        className={`tab-button ${activeTab === 'videos' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('videos')}
+                    >
+                        📹 Relatórios de Campo
                     </button>
-                    <button className="session-btn" onClick={() => setShowImportModal(true)}>
-                        📂 Importar
+                </div>
+
+                <div className="header-controls">
+                    <div className="role-badge">
+                        {playerRole === 'editor' ? '✏️ Oficial de Operações' : '👁️ Observador Tático'}
+                    </div>
+                    <button onClick={() => setShowPermissionModal(true)} className="share-btn">
+                        🔗 Transmitir Coordenadas
+                    </button>
+                    <button onClick={() => setShowExportModal(true)} className="export-btn">
+                        💾 Registrar Operação
+                    </button>
+                    <button onClick={() => setShowImportModal(true)} className="import-btn">
+                        📁 Carregar Briefing
                     </button>
                 </div>
             </header>
 
-            <div className="main-content">
-                <div
-                    className="toolbar"
+            {activeTab === 'canvas' ? (
+              <>
+                {/* Canvas e ferramentas */}
+                <div className="main-content">
+                  <div 
+                    className="toolbar" 
                     style={{ width: `${toolbarWidth}px` }}
-                >
+                  >
                     <div className="tool-section">
-                        <h3>🖌️ Ferramentas</h3>
-                        <div className="tool-buttons">
-                            <button
-                                className={`tool-button ${currentTool === 'brush' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                onClick={() => setCurrentTool('brush')}
-                                title="Pincel"
-                                disabled={playerRole !== 'editor'}
-                            >
-                                ✏️
-                            </button>
-                            <button
-                                className={`tool-button ${currentTool === 'eraser' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                onClick={() => setCurrentTool('eraser')}
-                                title="Borracha"
-                                disabled={playerRole !== 'editor'}
-                            >
-                                🧽
-                            </button>
-                            <button
-                                className={`tool-button ${currentTool === 'icon' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                onClick={() => setCurrentTool('icon')}
-                                title="Ícones"
-                                disabled={playerRole !== 'editor'}
-                            >
-                                🎯
-                            </button>
-                            <button
-                                className={`tool-button ${currentTool === 'temp-line' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                onClick={() => setCurrentTool('temp-line')}
-                                title="Linha Temporária"
-                                disabled={playerRole !== 'editor'}
-                            >
-                                ⚡
-                            </button>
-                            <button
-                                className={`tool-button ${currentTool === 'unit' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                onClick={() => setCurrentTool('unit')}
-                                title="Unidades Táticas"
-                                disabled={playerRole !== 'editor'}
-                            >
-                                ⚔️
-                            </button>
-                        </div>
+                      <h3>⚔️ Arsenal Tático</h3>
+                      <div className="tool-buttons">
+                        <button
+                          className={`tool-button ${currentTool === 'brush' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                          onClick={() => setCurrentTool('brush')}
+                          title="Marcador Tático"
+                          disabled={playerRole !== 'editor'}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className={`tool-button ${currentTool === 'eraser' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                          onClick={() => setCurrentTool('eraser')}
+                          title="Neutralizador de Marcas"
+                          disabled={playerRole !== 'editor'}
+                        >
+                          🧽
+                        </button>
+                        <button
+                          className={`tool-button ${currentTool === 'icon' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                          onClick={() => setCurrentTool('icon')}
+                          title="Marcadores de Campo"
+                          disabled={playerRole !== 'editor'}
+                        >
+                          🎯
+                        </button>
+                        <button
+                          className={`tool-button ${currentTool === 'temp-line' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                          onClick={() => setCurrentTool('temp-line')}
+                          title="Traço de Reconhecimento"
+                          disabled={playerRole !== 'editor'}
+                        >
+                          ⚡
+                        </button>
+                        <button
+                          className={`tool-button ${currentTool === 'unit' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                          onClick={() => setCurrentTool('unit')}
+                          title="Efetivo de Combate"
+                          disabled={playerRole !== 'editor'}
+                        >
+                          ⚔️
+                        </button>
+                      </div>
                     </div>
 
                     <div className="tool-section">
-                        <h3>🎨 Cores</h3>
-                        <div className="color-picker">
-                            {colors.map((color) => (
-                                <div
-                                    key={color}
-                                    className={`color-option ${currentColor === color ? 'active' : ''}`}
-                                    style={{ backgroundColor: color }}
-                                    onClick={() => setCurrentColor(color)}
-                                />
-                            ))}
-                        </div>
+                      <h3>🎨 Identificação de Unidade</h3>
+                      <div className="color-picker">
+                        {colors.map((color) => (
+                          <div
+                            key={color}
+                            className={`color-option ${currentColor === color ? 'active' : ''}`}
+                            style={{ backgroundColor: color }}
+                            onClick={() => setCurrentColor(color)}
+                            title={`Cor: ${color}`}
+                          />
+                        ))}
+                      </div>
                     </div>
 
                     <div className="tool-section">
-                        <h3>📏 Espessura</h3>
-                        <div className="slider-container">
-                            <input
-                                type="range"
-                                min="1"
-                                max="20"
-                                value={brushSize}
-                                onChange={(e) => setBrushSize(Number(e.target.value))}
-                                className="slider"
-                            />
-                            <span>{brushSize}px</span>
-                        </div>
+                      <h3>📏 Calibre de Traço</h3>
+                      <div className="thickness-control">
+                        <input
+                          type="range"
+                          min="1"
+                          max="20"
+                          value={brushSize}
+                          onChange={(e) => setBrushSize(Number(e.target.value))}
+                          className="thickness-slider"
+                          disabled={playerRole !== 'editor'}
+                        />
+                        <span className="thickness-value">{brushSize}px</span>
+                      </div>
                     </div>
 
                     {currentTool === 'icon' && (
-                        <div className="tool-section">
-                            <h3>🎯 Ícones PW</h3>
-                            <div className="icons-panel">
-                                {Object.entries(icons).map(([type, icon]) => (
-                                    <button
-                                        key={type}
-                                        className={`icon-button ${selectedIcon === type ? 'active' : ''}`}
-                                        onClick={() => setSelectedIcon(type as IconType)}
-                                    >
-                                        {icon}
-                                    </button>
-                                ))}
-                            </div>
+                      <div className="tool-section">
+                        <h3>🎯 Marcadores de Campo</h3>
+                        <div className="icons-panel">
+                          {Object.entries(icons).map(([key, value]) => (
+                            <button
+                              key={key}
+                              className={`icon-button ${selectedIcon === key ? 'active' : ''}`}
+                              onClick={() => setSelectedIcon(key as IconType)}
+                              title={value}
+                              disabled={playerRole !== 'editor'}
+                            >
+                              {value}
+                            </button>
+                          ))}
                         </div>
+                      </div>
                     )}
 
                     {currentTool === 'unit' && (
-                        <div className="tool-section">
-                            <h3>⚔️ Unidades Táticas</h3>
-                            <div className="units-panel">
-                                {Object.entries(pwUnitTypes).map(([key, unit]) => (
-                                    <button
-                                        key={key}
-                                        className={`unit-button ${selectedUnitType === key ? 'active' : ''}`}
-                                        onClick={() => setSelectedUnitType(key)}
-                                        title={unit.description}
-                                        style={{ borderColor: unit.color }}
-                                    >
-                                        <div className="unit-icon" style={{ color: unit.color }}>
-                                            {loadedIcons[key] ? (
-                                                <img
-                                                    src={unit.iconPath}
-                                                    alt={unit.name}
-                                                    style={{ width: '24px', height: '24px' }}
-                                                />
-                                            ) : (
-                                                <span>⏳</span>
-                                            )}
-                                        </div>
-                                        <div className="unit-name">{unit.name}</div>
-                                    </button>
-                                ))}
-                            </div>
+                      <div className="tool-section">
+                        <h3>⚔️ Efetivo de Combate</h3>
+                        <div className="units-panel">
+                          {Object.entries(pwUnitTypes).map(([key, unit]) => (
+                            <button
+                              key={key}
+                              className={`unit-button ${selectedUnitType === key ? 'active' : ''}`}
+                              onClick={() => setSelectedUnitType(key)}
+                              title={unit.description}
+                              disabled={playerRole !== 'editor'}
+                            >
+                              <div className="unit-icon">{unit.iconPath}</div>
+                              <div className="unit-name">{unit.name}</div>
+                            </button>
+                          ))}
                         </div>
+                      </div>
                     )}
 
                     <div className="tool-section">
-                        <h3>🧹 Ações</h3>
-                        <button
-                            className={`tool-button ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                            onClick={clearCanvas}
-                            disabled={playerRole !== 'editor'}
-                        >
-                            🗑️ Limpar
-                        </button>
+                      <h3>🔄 Ações de Campo</h3>
+                      <button
+                        className="tool-button"
+                        onClick={clearCanvas}
+                        disabled={playerRole !== 'editor'}
+                        title="Redefinir Campo"
+                      >
+                        🗑️
+                      </button>
                     </div>
-                </div>
+                  </div>
 
-                {/* Handle de redimensionamento da toolbar */}
-                <div
+                  {/* Handle de redimensionamento da toolbar */}
+                  <div
                     className="resize-handle resize-handle-toolbar"
                     onMouseDown={() => setIsResizingToolbar(true)}
-                />
+                  />
 
-                <div className="canvas-container">
+                  <div className="canvas-container">
                     <canvas
-                        ref={canvasRef}
-                        className="canvas"
-                        onMouseDown={(e) => {
-                            if (e.ctrlKey || e.metaKey) {
-                                startPanning(e);
-                            } else if (currentTool === 'icon' || currentTool === 'unit') {
-                                addIcon(e);
-                            } else {
-                                startDrawing(e);
-                            }
-                        }}
-                        onMouseMove={(e) => {
-                            if (isPanning) {
-                                panCanvas(e);
-                            } else if (isDrawing && currentTool !== 'icon') {
-                                draw(e);
-                            }
-                        }}
-                        onMouseUp={stopPanning}
-                        onMouseLeave={() => {
-                            if (isDrawing) {
-                                stopDrawing();
-                            }
-                            if (isPanning) {
-                                stopPanning();
-                            }
-                        }}
+                      ref={canvasRef}
+                      width={800}
+                      height={600}
+                      onMouseDown={startDrawing}
+                      onMouseMove={draw}
+                      onMouseUp={stopDrawing}
+                      onMouseLeave={stopDrawing}
+                      onWheel={handleWheel}
+                      onKeyDown={handleKeyDown}
+                      onKeyUp={handleKeyUp}
+                      tabIndex={0}
                     />
-
-                    <div className="players-list">
-                        <h4>👥 Jogadores ({players.length + 1})</h4>
-                        <div className="player-item">
-                            <div className="player-indicator" style={{ backgroundColor: currentColor }}></div>
-                            <span>Você</span>
-                        </div>
-                        {players.map((player) => (
-                            <div key={player.id || `player-${Math.random()}`} className="player-item">
-                                <div className="player-indicator" style={{ backgroundColor: player.color }}></div>
-                                <span>{player.name}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="active-layer-info">
-                        <span>Camada Ativa: {layers.find(l => l.id === activeLayerId)?.name}</span>
-                    </div>
-
-                    {/* Controles de Zoom */}
+                    
+                    {/* Zoom controls */}
                     <div className="zoom-controls">
-                        <button
-                            className="zoom-btn zoom-in"
-                            onClick={zoomIn}
-                            title="Zoom In (+)"
-                        >
-                            ➕
-                        </button>
-                        <button
-                            className="zoom-btn zoom-out"
-                            onClick={zoomOut}
-                            title="Zoom Out (-)"
-                        >
-                            ➖
-                        </button>
-                        <button
-                            className="zoom-btn zoom-reset"
-                            onClick={resetZoom}
-                            title="Reset Zoom (100%)"
-                        >
-                            🎯
-                        </button>
-                        <div className="zoom-info">
-                            {Math.round(zoom * 100)}%
-                        </div>
+                      <button className="zoom-btn zoom-in" onClick={zoomIn} title="Zoom In (+)">➕</button>
+                      <button className="zoom-btn zoom-out" onClick={zoomOut} title="Zoom Out (-)">➖</button>
+                      <button className="zoom-btn zoom-reset" onClick={resetZoom} title="Reset Zoom (100%)">🎯</button>
+                      <div className="zoom-info">{Math.round(zoom * 100)}%</div>
                     </div>
+                  </div>
 
-                    {/* Sistema de Chat */}
-                    <div className={`chat-container ${showChat ? 'open' : ''}`}>
-                        <div className="chat-header">
-                            <h3>💬 Chat</h3>
-                            <button
-                                className="chat-toggle-btn"
-                                onClick={() => setShowChat(!showChat)}
-                                title={showChat ? 'Ocultar Chat' : 'Mostrar Chat'}
-                            >
-                                {showChat ? '◀' : '▶'}
-                            </button>
-                        </div>
-
-                        {showChat && (
-                            <>
-                                {/* Input de Nome */}
-                                {showNameInput && (
-                                    <div className="name-input-container">
-                                        <input
-                                            type="text"
-                                            placeholder="Digite seu nome..."
-                                            value={playerName}
-                                            onChange={(e) => setPlayerName(e.target.value)}
-                                            onKeyPress={handleNameKeyPress}
-                                            className="name-input"
-                                            maxLength={20}
-                                        />
-                                        <button
-                                            className="name-submit-btn"
-                                            onClick={setPlayerNameHandler}
-                                        >
-                                            OK
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Mensagens */}
-                                <div className="chat-messages" ref={chatContainerRef}>
-                                    {messages.map((message) => (
-                                        <div
-                                            key={message.id || `message-${Math.random()}`}
-                                            className={`chat-message ${message.playerId === playerId.current ? 'own-message' : ''}`}
-                                        >
-                                            <div className="message-header">
-                                                <span
-                                                    className="player-name"
-                                                    style={{ color: message.playerColor }}
-                                                >
-                                                    {message.playerName}
-                                                </span>
-                                                <span className="message-time">
-                                                    {new Date(message.timestamp).toLocaleTimeString()}
-                                                </span>
-                                            </div>
-                                            <div className="message-text">
-                                                {message.text}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Input de Mensagem */}
-                                {!showNameInput && (
-                                    <div className="chat-input-container">
-                                        <input
-                                            type="text"
-                                            placeholder="Digite sua mensagem..."
-                                            value={chatInput}
-                                            onChange={(e) => setChatInput(e.target.value)}
-                                            onKeyPress={handleChatKeyPress}
-                                            className="chat-input"
-                                            maxLength={200}
-                                        />
-                                        <button
-                                            className="chat-send-btn"
-                                            onClick={sendMessage}
-                                            disabled={!chatInput.trim()}
-                                        >
-                                            ➤
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                {/* Handle de redimensionamento das camadas */}
-                <div
-                    className="resize-handle resize-handle-layers"
-                    onMouseDown={() => setIsResizingLayers(true)}
-                />
-
-                {/* Botão flutuante para mostrar painel de camadas quando oculto */}
-                {!showLayerManager && (
-                    <button
-                        className="show-layers-btn"
-                        onClick={() => setShowLayerManager(true)}
-                        title="Mostrar Painel de Camadas"
-                    >
-                        📑
-                    </button>
-                )}
-
-                {/* Painel de Camadas Profissional */}
-                <div
-                    className={`layers-panel ${showLayerManager ? 'open' : ''}`}
-                    style={{ width: `${layersPanelWidth}px` }}
-                >
+                  <div 
+                    className={`layers-panel ${showLayerManager ? 'expanded' : 'collapsed'}`}
+                    style={{ 
+                      width: showLayerManager ? `${layersPanelWidth}px` : '60px',
+                      minWidth: showLayerManager ? '250px' : '60px'
+                    }}
+                  >
                     <div className="layers-header">
-                        <h3>📑 Camadas</h3>
-                        <div className="layers-controls">
-                            <button
-                                className="layer-control-btn"
-                                onClick={() => setShowLayerManager(!showLayerManager)}
-                                title={showLayerManager ? 'Ocultar' : 'Mostrar'}
-                            >
-                                {showLayerManager ? '◀' : '▶'}
-                            </button>
-                            <button
-                                className={`layer-control-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                onClick={createLayer}
-                                title="Nova Camada"
-                                disabled={playerRole !== 'editor'}
-                            >
-                                ➕
-                            </button>
-                        </div>
+                      <h3>{showLayerManager ? '🗺️ Setores de Operação' : '🗺️'}</h3>
+                      <div className="layers-controls">
+                        <button
+                          className="layer-control-btn"
+                          onClick={() => setShowLayerManager(!showLayerManager)}
+                          title={showLayerManager ? 'Comprimir' : 'Expandir'}
+                        >
+                          {showLayerManager ? '◀' : '▶'}
+                        </button>
+                        {showLayerManager && (
+                          <button
+                            className={`layer-control-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                            onClick={createLayer}
+                            title="Adicionar Setor"
+                            disabled={playerRole !== 'editor'}
+                          >
+                            ➕
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {showLayerManager && (
-                        <div className="layers-content">
-                            <div className="layers-list">
-                                {layers.map((layer, index) => (
-                                    <div
-                                        key={`${layer.id}-${index}`}
-                                        className={`layer-item ${activeLayerId === layer.id ? 'active' : ''} ${layer.locked ? 'locked' : ''}`}
-                                        draggable
-                                        onDragStart={(e) => setDragLayerId(layer.id)}
-                                        onDragOver={(e) => e.preventDefault()}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            const fromIndex = layers.findIndex(l => l.id === dragLayerId);
-                                            if (fromIndex !== -1) {
-                                                moveLayer(fromIndex, index);
-                                            }
-                                        }}
-                                    >
-                                        <div className="layer-visibility-toggle">
-                                            <button
-                                                className={`visibility-btn ${layer.visible ? 'visible' : 'hidden'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                                onClick={() => toggleLayerVisibility(layer.id)}
-                                                title={layer.visible ? 'Ocultar' : 'Mostrar'}
-                                                disabled={playerRole !== 'editor'}
-                                            >
-                                                {layer.visible ? '👁️' : '🙈'}
-                                            </button>
-                                        </div>
+                      <div className="layers-content">
+                        <div className="layers-list">
+                          {layers.map((layer, index) => (
+                            <div
+                              key={`${layer.id}-${index}`}
+                              className={`layer-item ${activeLayerId === layer.id ? 'active' : ''} ${layer.locked ? 'locked' : ''}`}
+                              draggable
+                              onDragStart={(e) => setDragLayerId(layer.id)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const fromIndex = layers.findIndex(l => l.id === dragLayerId);
+                                if (fromIndex !== -1) {
+                                  moveLayer(fromIndex, index);
+                                }
+                              }}
+                            >
+                              <div className="layer-visibility-toggle">
+                                <button
+                                  className={`visibility-btn ${layer.visible ? 'visible' : 'hidden'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                  onClick={() => toggleLayerVisibility(layer.id)}
+                                  title={layer.visible ? 'Desativar Visibilidade' : 'Ativar Visibilidade'}
+                                  disabled={playerRole !== 'editor'}
+                                >
+                                  {layer.visible ? '👁️' : '🙈'}
+                                </button>
+                              </div>
 
-                                        <div className="layer-lock-toggle">
-                                            <button
-                                                className={`lock-btn ${layer.locked ? 'locked' : 'unlocked'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                                onClick={() => toggleLayerLock(layer.id)}
-                                                title={layer.locked ? 'Desbloquear' : 'Bloquear'}
-                                                disabled={playerRole !== 'editor'}
-                                            >
-                                                {layer.locked ? '🔒' : '🔓'}
-                                            </button>
-                                        </div>
+                              <div className="layer-lock-toggle">
+                                <button
+                                  className={`lock-btn ${layer.locked ? 'locked' : 'unlocked'} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                  onClick={() => toggleLayerLock(layer.id)}
+                                  title={layer.locked ? 'Liberar Setor' : 'Bloquear Setor'}
+                                  disabled={playerRole !== 'editor'}
+                                >
+                                  {layer.locked ? '🔒' : '🔓'}
+                                </button>
+                              </div>
 
-                                        <div className="layer-info" onClick={() => setActiveLayerId(layer.id)}>
-                                            <div className="layer-name">
-                                                {editingLayerId === layer.id ? (
-                                                    <input
-                                                        type="text"
-                                                        value={editingLayerName}
-                                                        onChange={(e) => setEditingLayerName(e.target.value)}
-                                                        onBlur={saveLayerName}
-                                                        onKeyPress={(e) => e.key === 'Enter' && saveLayerName()}
-                                                        autoFocus
-                                                    />
-                                                ) : (
-                                                    <span onDoubleClick={() => startEditingLayer(layer)}>
-                                                        {layer.name}
-                                                    </span>
-                                                )}
-                                            </div>
+                              <div className="layer-info" onClick={() => setActiveLayerId(layer.id)}>
+                                <div className="layer-name">
+                                  {editingLayerId === layer.id ? (
+                                    <input
+                                      type="text"
+                                      value={editingLayerName}
+                                      onChange={(e) => setEditingLayerName(e.target.value)}
+                                      onBlur={saveLayerName}
+                                      onKeyPress={(e) => e.key === 'Enter' && saveLayerName()}
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <span onDoubleClick={() => startEditingLayer(layer)}>
+                                      {layer.name}
+                                    </span>
+                                  )}
+                                </div>
 
-                                            <div className="layer-opacity">
-                                                <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="100"
-                                                    value={layer.opacity * 100}
-                                                    onChange={(e) => updateLayerOpacity(layer.id, Number(e.target.value) / 100)}
-                                                    className={`opacity-slider ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                                    disabled={playerRole !== 'editor'}
-                                                />
-                                                <span className="opacity-value">{Math.round(layer.opacity * 100)}%</span>
-                                            </div>
-                                        </div>
+                                <div className="layer-opacity">
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={layer.opacity * 100}
+                                    onChange={(e) => updateLayerOpacity(layer.id, Number(e.target.value) / 100)}
+                                    className={`opacity-slider ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                    disabled={playerRole !== 'editor'}
+                                  />
+                                  <span className="opacity-value">{Math.round(layer.opacity * 100)}%</span>
+                                </div>
+                              </div>
 
-                                        <div className="layer-actions">
-                                            <button
-                                                className={`layer-edit-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                                onClick={() => startEditingLayer(layer)}
-                                                title="Renomear"
-                                                disabled={playerRole !== 'editor'}
-                                            >
-                                                ✏️
-                                            </button>
-                                            <button
-                                                className={`layer-delete-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                                onClick={() => deleteLayer(layer.id)}
-                                                disabled={playerRole !== 'editor' || layers.length <= 1}
-                                                title="Deletar"
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                              <div className="layer-actions">
+                                <button
+                                  className={`layer-edit-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                  onClick={() => startEditingLayer(layer)}
+                                  title="Reclassificar Setor"
+                                  disabled={playerRole !== 'editor'}
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  className={`layer-delete-btn ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                  onClick={() => deleteLayer(layer.id)}
+                                  title="Desativar Setor"
+                                  disabled={playerRole !== 'editor'}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
                             </div>
+                          ))}
                         </div>
+                      </div>
                     )}
+                  </div>
                 </div>
+
+                {/* Chat */}
+                <div className="chat-container">
+                  <div className="chat-header">
+                    <h3>📡 Comunicações de Campo</h3>
+                    <button 
+                      className="chat-toggle-btn"
+                      onClick={() => setShowChat(!showChat)}
+                      title={showChat ? 'Ocultar' : 'Mostrar'}
+                    >
+                      {showChat ? '▼' : '▲'}
+                    </button>
+                  </div>
+
+                  {showChat && (
+                    <>
+                      {showNameInput ? (
+                        <div className="name-input-container">
+                          <p>Tudo pronto para o briefing de missão!</p>
+                          <p>Para iniciar, insira sua identificação de oficial:</p>
+                          <input
+                            type="text"
+                            value={playerName}
+                            onChange={(e) => setPlayerName(e.target.value)}
+                            placeholder="Sua identificação de oficial"
+                            className="name-input"
+                            maxLength={20}
+                          />
+                          <button 
+                            className="name-submit-btn"
+                            onClick={setPlayerNameHandler}
+                            disabled={!playerName.trim()}
+                          >
+                            Iniciar Briefing
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="chat-messages" ref={chatContainerRef}>
+                            {messages.map((message) => (
+                              <div key={message.id} className="chat-message">
+                                <div className="message-header">
+                                  <span 
+                                    className="player-name" 
+                                    style={{ color: message.playerColor }}
+                                  >
+                                    {message.playerName === playerName ? 'Oficial' : message.playerName}
+                                  </span>
+                                  <span className="message-time">
+                                    {new Date(message.timestamp).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                                <div className="message-text">{message.text}</div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className="chat-input-container">
+                            <input
+                              type="text"
+                              value={chatInput}
+                              onChange={(e) => setChatInput(e.target.value)}
+                              onKeyPress={handleChatKeyPress}
+                              placeholder="Insira sua comunicação..."
+                              className="chat-input"
+                              maxLength={200}
+                              disabled={playerRole !== 'editor'}
+                            />
+                            <button 
+                              className="chat-send-btn"
+                              onClick={sendMessage}
+                              disabled={!chatInput.trim() || playerRole !== 'editor'}
+                            >
+                              Transmitir
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Lista de Oficiais Conectados */}
+                <div className="players-list">
+                  <h4>👥 Oficiais Conectados</h4>
+                  {players.map((player) => (
+                    <div key={player.id} className="player-item">
+                      <div 
+                        className="player-indicator" 
+                        style={{ backgroundColor: player.color }}
+                      />
+                      <span className="player-name">
+                        {player.name === playerName ? 'Oficial' : player.name}
+                      </span>
+                      <span className="player-role">
+                        {player.role === 'editor' ? '✏️' : '👁️'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Aba de Vídeos */}
+                <div className="videos-content">
+                  <div className="videos-header">
+                    <h2>📹 Centro de Inteligência</h2>
+                    {playerRole === 'editor' && (
+                      <button 
+                        className="add-video-btn"
+                        onClick={() => setShowVideoModal(true)}
+                      >
+                        ➕ Anexar Relatório
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="videos-list">
+                    {videoLinks.length === 0 ? (
+                      <div className="no-videos">
+                        <p>Nenhum relatório de inteligência disponível.</p>
+                        <p>Anexe relatórios de vídeo para análise tática e planejamento de missão.</p>
+                      </div>
+                    ) : (
+                      videoLinks.map((video) => (
+                        <div key={video.id} className="video-item">
+                          <div className="video-info">
+                            <div className="video-header">
+                              <h3>{video.title}</h3>
+                              <div className="video-meta">
+                                <span className="player-name" style={{ color: video.playerColor }}>
+                                  {video.playerName}
+                                </span>
+                                <span className="video-time">
+                                  {new Date(video.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                            </div>
+                            {video.description && (
+                              <p className="video-description">{video.description}</p>
+                            )}
+                            <div className="video-url">
+                              <a 
+                                href={video.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  openVideoLink(video.url);
+                                }}
+                              >
+                                🔗 {video.url}
+                              </a>
+                            </div>
+                          </div>
+                          
+                          {playerRole === 'editor' && (
+                            <button 
+                              className="remove-video-btn"
+                              onClick={() => removeVideoLink(video.id)}
+                              title="Descartar Relatório"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+        {/* Modal de Exportação */}
+        {showExportModal && (
+          <div className="export-modal">
+            <div className="modal-content">
+              <h2>💾 Registrar Operação</h2>
+              <p>Registre o estado atual da operação para futuras análises.</p>
+
+              <div className="export-info">
+                <p>Os seguintes itens serão registrados:</p>
+                <ul>
+                  <li>Todos os setores de operação e marcações táticas.</li>
+                  <li>Registro de comunicações.</li>
+                  <li>Parâmetros de visualização do mapa.</li>
+                  <li>Referências de inteligência.</li>
+                </ul>
+              </div>
+              
+              <div className="modal-actions">
+                <button 
+                  className="export-btn"
+                  onClick={exportSession}
+                >
+                  💾 Registrar Agora
+                </button>
+                <button className="cancel-btn" onClick={() => setShowExportModal(false)}>
+                  Abortar
+                </button>
+              </div>
+              <button className="close-modal-btn" onClick={() => setShowExportModal(false)}>
+                ✕
+              </button>
             </div>
+          </div>
+        )}
 
-            {/* Modal de Permissão */}
-            {showPermissionModal && (
-                <div className="permission-modal">
-                    <div className="modal-content">
-                        <h2>Compartilhar Sessão</h2>
-                        <p>Compartilhe este link para permitir que outros jogadores participem da sessão.</p>
-                        <div className="permission-options">
-                            <button
-                                className="permission-option"
-                                onClick={() => generateLink('editor')}
-                                title="Compartilhar como Editor"
-                            >
-                                Compartilhar como Editor
-                            </button>
-                            <button
-                                className="permission-option"
-                                onClick={() => generateLink('viewer')}
-                                title="Compartilhar como Visualizador"
-                            >
-                                Compartilhar como Visualizador
-                            </button>
-                        </div>
-                        <button className="close-modal-btn" onClick={() => setShowPermissionModal(false)}>
-                            ✕
-                        </button>
-                    </div>
+        {/* Modal de Importação */}
+        {showImportModal && (
+          <div className="import-modal">
+            <div className="modal-content">
+              <h2>📋 Carregar Briefing de Missão</h2>
+              <p>Carregue um briefing de missão salvo anteriormente.</p>
+
+              <div className="import-methods">
+                <div className="import-method">
+                  <h3>📁 Receber Transmissão</h3>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    className="file-input"
+                  />
                 </div>
-            )}
 
-            {/* Modal de Exportação */}
-            {showExportModal && (
-                <div className="export-modal">
-                    <div className="modal-content">
-                        <h2>Exportar Sessão</h2>
-                        <p>Salve sua sessão atual em um arquivo para usar posteriormente.</p>
-                        <div className="export-info">
-                            <p><strong>Será exportado:</strong></p>
-                            <ul>
-                                <li>✅ Todas as camadas e desenhos</li>
-                                <li>✅ Histórico de chat</li>
-                                <li>✅ Linhas temporárias</li>
-                                <li>✅ Configurações de zoom e pan</li>
-                                <li>✅ Metadados da sessão</li>
-                            </ul>
-                        </div>
-                        <div className="modal-actions">
-                            <button className="export-btn" onClick={exportSession}>
-                                💾 Exportar Sessão
-                            </button>
-                            <button className="cancel-btn" onClick={() => setShowExportModal(false)}>
-                                Cancelar
-                            </button>
-                        </div>
-                        <button className="close-modal-btn" onClick={() => setShowExportModal(false)}>
-                            ✕
-                        </button>
-                    </div>
+                <div className="import-method">
+                  <h3>📋 Decodificar Dados</h3>
+                  <textarea
+                    placeholder="Cole aqui os dados do briefing..."
+                    value={importData}
+                    onChange={(e) => setImportData(e.target.value)}
+                    className="import-textarea"
+                    rows={8}
+                  />
                 </div>
-            )}
+              </div>
+              
+              <div className="modal-actions">
+                <button 
+                  className="import-btn"
+                  onClick={importSession}
+                  disabled={!importData.trim() || isLoading}
+                >
+                  {isLoading ? '⏳ Decodificando...' : '📂 Iniciar Briefing'}
+                </button>
+                <button className="cancel-btn" onClick={() => {
+                  setShowImportModal(false);
+                  setImportData('');
+                }}>
+                  Abortar
+                </button>
+              </div>
+              <button className="close-modal-btn" onClick={() => {
+                setShowImportModal(false);
+                setImportData('');
+              }}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
-            {/* Modal de Importação */}
-            {showImportModal && (
-                <div className="import-modal">
-                    <div className="modal-content">
-                        <h2>Importar Sessão</h2>
-                        <p>Carregue uma sessão salva anteriormente.</p>
+        {/* Modal de Adicionar Vídeo */}
+        {showVideoModal && (
+          <div className="video-modal">
+            <div className="modal-content">
+              <h2>📹 Anexar Relatório</h2>
+              <p>Adicione um relatório de vídeo para análise tática durante o planejamento.</p>
 
-                        <div className="import-methods">
-                            <div className="import-method">
-                                <h3>📁 Carregar Arquivo</h3>
-                                <input
-                                    type="file"
-                                    accept=".json"
-                                    onChange={handleFileUpload}
-                                    className="file-input"
-                                />
-                            </div>
+              <div className="form-group">
+                <label htmlFor="video-title">Assunto do Relatório:</label>
+                <input
+                  id="video-title"
+                  type="text"
+                  placeholder="Ex: Análise de Posicionamento Inimigo"
+                  value={newVideoTitle}
+                  onChange={(e) => setNewVideoTitle(e.target.value)}
+                  className="form-input"
+                />
+              </div>
 
-                            <div className="import-method">
-                                <h3>📋 Colar Dados</h3>
-                                <textarea
-                                    placeholder="Cole aqui os dados da sessão..."
-                                    value={importData}
-                                    onChange={(e) => setImportData(e.target.value)}
-                                    className="import-textarea"
-                                    rows={8}
-                                />
-                            </div>
-                        </div>
+              <div className="form-group">
+                <label htmlFor="video-url">Localização do Relatório (URL):</label>
+                <input
+                  id="video-url"
+                  type="url"
+                  placeholder="https://..."
+                  value={newVideoUrl}
+                  onChange={(e) => setNewVideoUrl(e.target.value)}
+                  className="form-input"
+                />
+                {newVideoUrl && !validateVideoUrl(newVideoUrl) && (
+                  <div className="url-warning">
+                    Localização do relatório inválida ou de fonte não autorizada.
+                  </div>
+                )}
+              </div>
 
-                        <div className="modal-actions">
-                            <button
-                                className="import-btn"
-                                onClick={importSession}
-                                disabled={!importData.trim() || isLoading}
-                            >
-                                {isLoading ? '⏳ Carregando...' : '📂 Importar Sessão'}
-                            </button>
-                            <button className="cancel-btn" onClick={() => {
-                                setShowImportModal(false);
-                                setImportData('');
-                            }}>
-                                Cancelar
-                            </button>
-                        </div>
-                        <button className="close-modal-btn" onClick={() => {
-                            setShowImportModal(false);
-                            setImportData('');
-                        }}>
-                            ✕
-                        </button>
-                    </div>
+              <div className="form-group">
+                <label htmlFor="video-description">Observações do Oficial (Opcional):</label>
+                <textarea
+                  id="video-description"
+                  placeholder="Ex: Vídeo mostra posicionamento das forças inimigas na região norte"
+                  value={newVideoDescription}
+                  onChange={(e) => setNewVideoDescription(e.target.value)}
+                  className="form-textarea"
+                  rows={3}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  className="add-btn"
+                  onClick={addVideoLink}
+                  disabled={!newVideoTitle.trim() || !newVideoUrl.trim()}
+                >
+                  ➕ Anexar
+                </button>
+                <button className="cancel-btn" onClick={() => setShowVideoModal(false)}>
+                  Abortar
+                </button>
+              </div>
+              <button className="close-modal-btn" onClick={() => setShowVideoModal(false)}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Permissões */}
+        {showPermissionModal && (
+          <div className="permission-modal">
+            <div className="modal-content">
+              <h2>🔗 Transmitir Coordenadas</h2>
+              <p>Compartilhe o acesso ao mapa de operações com outros oficiais.</p>
+
+              <div className="permission-options">
+                <div 
+                  className={`permission-option ${selectedPermission === 'editor' ? 'active' : ''}`}
+                  onClick={() => setSelectedPermission('editor')}
+                >
+                  <h3>✏️ Oficial de Operações</h3>
+                  <p>Pode desenhar, editar setores, gerenciar operações e transmitir comunicações.</p>
                 </div>
-            )}
+                
+                <div 
+                  className={`permission-option ${selectedPermission === 'viewer' ? 'active' : ''}`}
+                  onClick={() => setSelectedPermission('viewer')}
+                >
+                  <h3>👁️ Observador Tático</h3>
+                  <p>Pode visualizar o mapa, setores e comunicações, mas não pode fazer alterações.</p>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  className="share-btn"
+                  onClick={() => generateLink(selectedPermission)}
+                >
+                  🔗 Gerar Link
+                </button>
+                <button className="cancel-btn" onClick={() => setShowPermissionModal(false)}>
+                  Abortar
+                </button>
+              </div>
+              <button className="close-modal-btn" onClick={() => setShowPermissionModal(false)}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         </div>
     );
 };

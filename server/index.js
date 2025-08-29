@@ -69,9 +69,9 @@ io.on('connection', (socket) => {
       console.log(`📝 Criando nova sessão: ${sessionId}`);
       sessions[sessionId] = {
         players: [],
-        drawings: [],
-        layers: {}, // Armazenar dados das camadas por sessão
-        messages: [] // Adicionar array de mensagens
+        layers: {},
+        messages: [],
+        videoLinks: []
       };
     } else {
       console.log(`📊 Sessão ${sessionId} já existe com ${sessions[sessionId].drawings.length} desenhos`);
@@ -110,8 +110,11 @@ io.on('connection', (socket) => {
     console.log(`📤 Enviando estado de ${Object.keys(session.layers).length} camadas para ${playerId}`);
     socket.emit('layers-state', session.layers);
 
-    // Enviar mensagens existentes para o novo jogador
+    // Enviar histórico de chat para o novo jogador
     socket.emit('chat-history', session.messages);
+    
+    // Enviar histórico de links de vídeo para o novo jogador
+    socket.emit('video-links-history', session.videoLinks);
 
     console.log(`✅ Jogador ${playerId} entrou na sessão ${sessionId}`);
   });
@@ -204,6 +207,24 @@ io.on('connection', (socket) => {
 
       // Transmitir para outros jogadores
       socket.to(sessionId).emit('player-name', { playerId, name });
+    }
+  });
+
+  // Handler para adicionar link de vídeo
+  socket.on('video-link', (videoLink) => {
+    const session = sessions[sessionId];
+    if (session) {
+      session.videoLinks.push(videoLink);
+      socket.to(sessionId).emit('video-link', videoLink);
+    }
+  });
+
+  // Handler para remover link de vídeo
+  socket.on('remove-video-link', (videoId) => {
+    const session = sessions[sessionId];
+    if (session) {
+      session.videoLinks = session.videoLinks.filter(v => v.id !== videoId);
+      socket.to(sessionId).emit('remove-video-link', videoId);
     }
   });
 

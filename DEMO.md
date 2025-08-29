@@ -3,13 +3,31 @@
 ## 🚀 Como Testar o Sistema de Camadas Profissional, Linhas Temporárias com Fade Progressivo e Redimensionamento Dinâmico
 
 ### 1. Iniciar o Projeto
-```bash
-# Terminal 1 - Backend
-npm run server
 
-# Terminal 2 - Frontend  
+#### 🚀 **Método Recomendado (Um comando)**
+```bash
+# Linux/Mac
+./dev.sh
+
+# Windows
+dev.bat
+
+# Ou manualmente
+npm run dev:all
+```
+
+#### 🔧 **Método Manual (Dois terminais)**
+```bash
+# Terminal 1 - Backend com live reload
+npm run server:dev
+
+# Terminal 2 - Frontend
 npm run dev
 ```
+
+#### 📱 **Acessar a Aplicação**
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:3001
 
 ### 2. Abrir Múltiplas Abas
 - Abra `http://localhost:3000` em várias abas do navegador
@@ -38,7 +56,58 @@ npm run dev
 3. **Canvas responsivo**: Verifique se o canvas se adapta ao novo espaço
 4. **Diferentes telas**: Teste em desktop, tablet e mobile
 
-### 5. Testar Sistema de Zoom e Pan
+### 3. Testar Sistema de Abas
+
+#### 🎨 **Aba Canvas**
+- ✅ Verificar se o canvas está visível e funcional
+- ✅ Testar ferramentas de desenho
+- ✅ Verificar sistema de camadas
+- ✅ Testar zoom e pan
+
+#### 📹 **Aba Vídeos**
+- ✅ Clicar na aba "📹 Vídeos"
+- ✅ Verificar se a interface de vídeos está visível
+- ✅ Verificar mensagem "Nenhum vídeo adicionado ainda"
+
+### 4. Testar Sistema de Links de Vídeo
+
+#### ➕ **Adicionar Vídeo**
+- ✅ Clicar no botão "➕ Adicionar Vídeo"
+- ✅ Verificar se o modal abre corretamente
+- ✅ Preencher título: "Tutorial de Boss"
+- ✅ Preencher URL: "https://youtube.com/watch?v=dQw4w9WgXcQ"
+- ✅ Adicionar descrição: "Vídeo mostra estratégia para derrotar o boss"
+- ✅ Clicar em "➕ Adicionar Vídeo"
+- ✅ Verificar se o vídeo aparece na lista
+
+#### 🔗 **Validar URLs**
+- ✅ Testar URL válida (YouTube)
+- ✅ Testar URL inválida (deve mostrar aviso)
+- ✅ Verificar se plataformas suportadas são reconhecidas
+
+#### 👥 **Colaboração de Vídeos**
+- ✅ Abrir nova aba com link de editor
+- ✅ Verificar se o vídeo aparece para o novo jogador
+- ✅ Testar se visualizadores podem ver vídeos mas não removê-los
+
+#### 🗑️ **Remover Vídeo**
+- ✅ Clicar no botão 🗑️ do vídeo
+- ✅ Verificar se o vídeo é removido da lista
+- ✅ Verificar se a remoção é sincronizada entre jogadores
+
+### 5. Testar Exportação/Importação com Vídeos
+
+#### 💾 **Exportar Sessão com Vídeos**
+- ✅ Adicionar alguns vídeos
+- ✅ Clicar em "💾 Exportar"
+- ✅ Verificar se o arquivo contém os links de vídeo
+
+#### 📂 **Importar Sessão com Vídeos**
+- ✅ Clicar em "📁 Importar"
+- ✅ Carregar arquivo exportado
+- ✅ Verificar se os vídeos são carregados corretamente
+
+### 6. Testar Sistema de Zoom e Pan
 
 #### 🔍 Controles de Zoom
 1. **Localizar controles**: Procure os botões no canto inferior esquerdo do canvas
@@ -62,7 +131,7 @@ npm run dev
 4. **Precisão**: Combine zoom alto com pan para trabalhar com precisão
 5. **Colaboração**: Todos os jogadores veem o mesmo zoom e pan
 
-### 6. Testar Sistema de Chat
+### 7. Testar Sistema de Chat
 
 #### 💬 Configuração Inicial
 1. **Localizar chat**: Procure o painel no canto inferior direito
@@ -96,7 +165,7 @@ npm run dev
 3. **Adaptação**: Verifique se o chat se adapta ao espaço disponível
 4. **Usabilidade**: Confirme que o chat permanece funcional
 
-### 7. Testar Sistema de Permissões
+### 8. Testar Sistema de Permissões
 
 #### 🔐 Tipos de Acesso
 1. **Editor**: Pode desenhar, modificar camadas, usar todas as ferramentas
@@ -127,7 +196,7 @@ npm run dev
 3. **Modal de compartilhamento**: Interface clara para escolher permissão
 4. **Feedback de cópia**: Confirmação do tipo de link copiado
 
-### 8. Testar Sistema de Exportação/Importação
+### 9. Testar Sistema de Exportação/Importação
 
 #### 💾 Exportar Sessão
 1. **Criar conteúdo**: Desenhe, adicione camadas, use chat
@@ -158,7 +227,7 @@ npm run dev
 4. **Teste de erro**: Tente importar arquivo inválido
 5. **Validação**: Confirme que erros são tratados adequadamente
 
-### 9. Testar o Painel de Camadas Profissional
+### 10. Testar o Painel de Camadas Profissional
 
 #### 📑 Acessar o Painel
 1. O painel de camadas está localizado no lado direito da tela

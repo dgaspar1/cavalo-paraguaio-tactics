@@ -1,14 +1,97 @@
 :root {
-  --primary-color: #ffd700;
-  --secondary-color: #8b4513;
-  --accent-color: #ff6b35;
-  --background-dark: #1a1a2e;
-  --background-medium: #16213e;
-  --background-light: #0f3460;
-  --text-light: #ffffff;
-  --text-dark: #333333;
-  --border-color: #444;
-  --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  /* Tema Militar Chinês - Cores Sóbrias */
+  --primary-color: #1a1a1a;
+  --secondary-color: #2d2d2d;
+  --accent-color: #8b0000; /* Vermelho militar escuro */
+  --accent-hover: #a52a2a;
+  --accent-light: #cd5c5c;
+  
+  /* Cores de Fundo */
+  --bg-primary: #0f0f0f; /* Preto militar */
+  --bg-secondary: #1e1e1e; /* Cinza escuro */
+  --bg-tertiary: #2a2a2a; /* Cinza médio */
+  --bg-elevated: #333333; /* Cinza claro para elementos elevados */
+  
+  /* Cores de Texto */
+  --text-primary: #e0e0e0; /* Branco suave */
+  --text-secondary: #b0b0b0; /* Cinza claro */
+  --text-muted: #808080; /* Cinza médio */
+  --text-inverse: #1a1a1a; /* Para texto em fundos claros */
+  
+  /* Cores de Borda */
+  --border-color: #404040; /* Cinza escuro */
+  --border-light: #505050; /* Cinza médio */
+  --border-accent: #8b0000; /* Vermelho militar */
+  
+  /* Cores de Estado */
+  --success-color: #2d5a2d; /* Verde militar escuro */
+  --warning-color: #8b5a00; /* Amarelo militar escuro */
+  --error-color: #8b0000; /* Vermelho militar */
+  --info-color: #2d4d5a; /* Azul militar escuro */
+  
+  /* Sombras e Efeitos */
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-medium: rgba(0, 0, 0, 0.2);
+  --shadow-heavy: rgba(0, 0, 0, 0.4);
+  --shadow-accent: rgba(139, 0, 0, 0.2);
+  
+  /* Gradientes */
+  --gradient-primary: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  --gradient-secondary: linear-gradient(135deg, #2d2d2d 0%, #404040 100%);
+  --gradient-accent: linear-gradient(135deg, #8b0000 0%, #a52a2a 100%);
+  
+  /* Transparências */
+  --transparency-light: rgba(255, 255, 255, 0.05);
+  --transparency-medium: rgba(255, 255, 255, 0.1);
+  --transparency-heavy: rgba(255, 255, 255, 0.15);
+  
+  /* Bordas e Raios */
+  --border-radius-small: 4px;
+  --border-radius-medium: 8px;
+  --border-radius-large: 12px;
+  --border-radius-xl: 16px;
+  
+  /* Espaçamentos */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+  
+  /* Tipografia */
+  --font-family-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  
+  /* Tamanhos de Fonte */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 24px;
+  --font-size-title: 28px;
+  
+  /* Pesos de Fonte */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Transições */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.35s ease;
+  
+  /* Z-index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
 }
 
 * {
@@ -18,11 +101,44 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Arial', sans-serif;
-  background: linear-gradient(135deg, var(--background-dark) 0%, var(--background-medium) 50%, var(--background-light) 100%);
-  color: var(--text-light);
-  overflow: hidden;
-  height: 100vh;
+  font-family: var(--font-family-primary);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Scrollbar personalizada estilo macOS */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-small);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--border-radius-small);
+  transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg-secondary);
 }
 
 .app {

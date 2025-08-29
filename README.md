@@ -4,113 +4,44 @@ Um app web colaborativo para planejamento de táticas no MMORPG Perfect World, s
 
 ## ✨ Funcionalidades
 
-### 🎯 Ferramentas de Desenho
-- **Pincel**: Desenho livre com cores personalizáveis
-- **Borracha**: Remover desenhos
-- **Ícones**: Marcadores específicos do Perfect World
-- **Linha Temporária**: Desenhos que desaparecem gradualmente do início ao fim
-- **Controle de espessura**: Ajustar tamanho do pincel
+### 🎨 **Canvas Colaborativo**
+- **Desenho em Tempo Real**: Múltiplos jogadores podem desenhar simultaneamente
+- **Mapa de Fundo**: Imagem de fundo do Perfect World integrada ao canvas
+- **Sistema de Camadas**: Organize desenhos em camadas separadas com controles profissionais
+- **Ferramentas Diversas**: Pincel, borracha, texto, ícones temáticos e unidades do jogo
+- **Linhas Temporárias**: Linhas que desaparecem gradualmente para comunicação rápida
+- **Zoom e Pan**: Navegue pelo mapa com controles intuitivos
 
-### 🗺️ Mapa de Fundo
-- **Mapa do Perfect World**: Imagem de fundo temática do jogo
-- **Canvas responsivo**: Ajusta automaticamente ao tamanho da tela
-- **Fundo integrado**: Desenhos sobrepostos ao mapa
+### 📹 **Sistema de Links de Vídeo**
+- **Referência Visual**: Adicione links de vídeos para referência durante o planejamento
+- **Plataformas Suportadas**: YouTube, Twitch, Vimeo, Dailymotion, Bilibili, TikTok, Instagram
+- **Colaboração**: Todos os jogadores podem ver e acessar os vídeos compartilhados
+- **Organização**: Título, descrição e metadados para cada link
+- **Histórico**: Links são salvos na sessão e podem ser exportados/importados
 
-### 📑 Sistema de Camadas Profissional
-- **Painel lateral**: Interface similar a ferramentas profissionais (Photoshop, Figma)
-- **Uma camada por padrão**: "Camada Principal" criada automaticamente
-- **Botão flutuante**: Botão circular 📑 para mostrar painel quando oculto
-- **Múltiplas camadas**: Organizar desenhos em camadas separadas
-- **Criar camadas**: Adicionar novas camadas conforme necessário
-- **Deletar camadas**: Remover camadas não utilizadas
-- **Renomear camadas**: Duplo clique para editar nomes
-- **Ocultar camadas**: Toggle de visibilidade com ícones intuitivos
-- **Bloquear camadas**: Proteger camadas contra edição acidental
-- **Controle de opacidade**: Slider para ajustar transparência (0-100%)
-- **Reordenação**: Drag & drop para reorganizar camadas
-- **Camada ativa**: Indicador visual da camada selecionada
-- **Painel colapsável**: Ocultar/mostrar painel de camadas
+### 💬 **Chat em Tempo Real**
+- **Comunicação**: Chat integrado para discussões durante o planejamento
+- **Identificação**: Cada jogador tem cor única e nome personalizável
+- **Histórico**: Mensagens são salvas na sessão
+- **Sincronização**: Chat sincronizado entre todos os participantes
 
-### 🔧 Redimensionamento Dinâmico
-- **Toolbar redimensionável**: Ajustar largura da barra de ferramentas (200-500px)
-- **Painel de camadas redimensionável**: Ajustar largura do painel (250-600px)
-- **Handles visuais**: Barras de redimensionamento com feedback visual
-- **Limites responsivos**: Tamanhos mínimos e máximos para cada painel
-- **Transições suaves**: Animações durante o redimensionamento
-- **Responsividade automática**: Adaptação a diferentes tamanhos de tela
+### 🔐 **Sistema de Permissões**
+- **Editor**: Pode desenhar, gerenciar camadas e adicionar/remover vídeos
+- **Visualizador**: Apenas visualiza o conteúdo (modo somente leitura)
+- **Links Personalizados**: Cada permissão gera um link específico
+- **Controle de Acesso**: Gerencie quem pode editar a sessão
 
-### 🔍 Sistema de Zoom e Pan
-- **Controles de zoom**: Botões no canto inferior esquerdo do canvas
-- **Zoom in/out**: Aumentar/diminuir zoom com botões ➕/➖
-- **Reset zoom**: Botão 🎯 para voltar ao zoom 100%
-- **Indicador de zoom**: Mostra porcentagem atual do zoom
-- **Pan com Ctrl+clique**: Segurar Ctrl e arrastar para mover o canvas
-- **Limites de zoom**: 10% (mínimo) a 500% (máximo)
-- **Transformações suaves**: Zoom e pan aplicados em tempo real
-- **Sincronização**: Zoom e pan sincronizados entre jogadores
+### 💾 **Persistência de Sessão**
+- **Exportação**: Salve toda a sessão em um arquivo JSON
+- **Importação**: Carregue sessões salvas anteriormente
+- **Dados Completos**: Inclui desenhos, chat, vídeos, camadas e configurações
+- **Sem Banco de Dados**: Sistema baseado em arquivos para simplicidade
 
-### 💬 Sistema de Chat
-- **Chat em tempo real**: Comunicação instantânea entre jogadores
-- **Painel colapsável**: Chat no canto inferior direito (colapsável)
-- **Nomes personalizados**: Cada jogador define seu nome
-- **Cores individuais**: Mensagens com cores dos jogadores
-- **Histórico de mensagens**: Mensagens anteriores carregadas ao entrar
-- **Timestamps**: Horário de cada mensagem
-- **Auto-scroll**: Chat rola automaticamente para novas mensagens
-- **Responsivo**: Interface adaptada para mobile e desktop
-
-### 🔐 Sistema de Permissões
-- **Dois tipos de acesso**: Editor e Visualizador
-- **Links específicos**: Cada link tem sua permissão definida
-- **Controle de edição**: Apenas editores podem desenhar e modificar
-- **Visualização livre**: Visualizadores podem ver tudo mas não editar
-- **Indicadores visuais**: Badge mostrando o tipo de permissão
-- **Interface adaptativa**: Elementos desabilitados para visualizadores
-- **Compartilhamento inteligente**: Modal para escolher tipo de link
-- **Segurança**: Permissões verificadas no cliente e servidor
-
-### 💾 Sistema de Exportação/Importação
-- **Exportação completa**: Salva toda a sessão em arquivo JSON
-- **Importação flexível**: Carrega sessões via arquivo ou colagem de dados
-- **Dados preservados**: Camadas, desenhos, chat, zoom, pan e metadados
-- **Formato portável**: Arquivos JSON podem ser compartilhados
-- **Validação**: Verifica integridade dos dados importados
-- **Interface intuitiva**: Modais claros para exportar e importar
-- **Feedback visual**: Confirmação de operações bem-sucedidas
-- **Responsivo**: Funciona em desktop e mobile
-
-### ⚡ Linhas Temporárias com Fade Progressivo
-- **Desvanecimento gradual**: Linhas desaparecem do início ao fim
-- **Segmentos individuais**: Cada parte da linha tem seu próprio tempo de vida
-- **Efeito visual**: Cria um efeito de "rastro que se desfaz"
-- **Comunicação visual**: Ideal para apontar elementos durante discussões
-- **Sincronização**: Todos os jogadores veem as linhas temporárias
-- **Duração configurável**: 3 segundos de duração por segmento
-- **Ferramenta dedicada**: Botão ⚡ para ativar modo de linha temporária
-
-### 🎨 Ícones Temáticos do Perfect World
-- 👹 **Mob**: Criaturas inimigas
-- 👤 **NPC**: Personagens não-jogáveis
-- 💎 **Recurso**: Materiais e recursos
-- 👺 **Boss**: Chefes e inimigos especiais
-- 🌀 **Portal**: Teleportes e entradas
-- ❓ **Quest**: Missões e objetivos
-
-### 👥 Colaboração em Tempo Real
-- **Sessões privadas**: Links únicos para cada sessão
-- **Sincronização**: Desenhos aparecem instantaneamente para todos
-- **Lista de jogadores**: Visualizar quem está na sessão
-- **Cores individuais**: Cada jogador tem sua cor identificadora
-- **Sincronização de camadas**: Mudanças nas camadas sincronizadas entre jogadores
-- **Interação visual**: Linhas temporárias para comunicação rápida
-
-### 🎨 Interface Temática
-- Design inspirado no Perfect World
-- Paleta de cores dourada e azul
-- Interface responsiva e moderna
-- Efeitos visuais e animações
-- Painel de camadas profissional
-- Redimensionamento dinâmico
+### 🎛️ **Interface Profissional**
+- **Sistema de Abas**: Alternância entre canvas e gerenciamento de vídeos
+- **Painéis Redimensionáveis**: Ajuste o tamanho das colunas laterais
+- **Gerenciamento de Camadas**: Interface similar ao Photoshop/Figma
+- **Responsividade**: Adapta-se a diferentes tamanhos de tela
 
 ## 🚀 Como Usar
 
@@ -119,7 +50,7 @@ Um app web colaborativo para planejamento de táticas no MMORPG Perfect World, s
 1. **Clone o repositório**
 ```bash
 git clone <url-do-repositorio>
-cd perfect-world-tactics
+cd cavalo-paraguayo-tatics
 ```
 
 2. **Instale as dependências**
@@ -127,19 +58,60 @@ cd perfect-world-tactics
 npm install
 ```
 
-3. **Inicie o servidor backend**
+3. **Inicie o ambiente de desenvolvimento (Recomendado)**
 ```bash
-npm run server
+# Linux/Mac
+./dev.sh
+
+# Windows
+dev.bat
+
+# Ou manualmente
+npm run dev:all
 ```
 
-4. **Em outro terminal, inicie o frontend**
+4. **Ou inicie separadamente**
 ```bash
+# Terminal 1 - Backend com live reload
+npm run server:dev
+
+# Terminal 2 - Frontend
 npm run dev
 ```
 
 5. **Acesse o app**
 ```
-http://localhost:3000
+Frontend: http://localhost:3000
+Backend: http://localhost:3001
+```
+
+### Scripts Disponíveis
+
+#### 🚀 **Desenvolvimento**
+```bash
+npm run dev:all          # Inicia backend + frontend simultaneamente
+npm run server:dev       # Backend com live reload (nodemon)
+npm run dev              # Frontend com hot reload (vite)
+```
+
+#### 🔧 **Produção**
+```bash
+npm run build            # Build do frontend
+npm run preview          # Preview do build
+npm run start            # Inicia backend + preview simultaneamente
+```
+
+#### 📦 **Utilitários**
+```bash
+npm run server           # Backend sem live reload
+npm run lint             # Verificação de código
+npm install              # Instala dependências
+```
+
+#### 🐚 **Scripts de Sistema**
+```bash
+./dev.sh                 # Script bash para Linux/Mac
+dev.bat                  # Script batch para Windows
 ```
 
 ### Uso Básico

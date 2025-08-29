@@ -1,0 +1,13 @@
+{
+  "watch": ["server/"],
+  "ext": "js,json",
+  "ignore": ["node_modules/", "public/", "src/"],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "exec": "node server/index.js",
+  "restartable": "rs",
+  "verbose": true,
+  "colours": true,
+  "delay": 1000
+} 
