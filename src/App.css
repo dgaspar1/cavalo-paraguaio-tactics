@@ -116,13 +116,13 @@
 }
 
 .minimized-icon {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-medium);
   background: var(--bg-elevated);
   color: var(--text-secondary);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
@@ -139,6 +139,25 @@
 
 .minimized-icon:active {
   transform: scale(0.95);
+}
+
+/* Cabeçalhos de seção clicáveis */
+.section-header.clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-small);
+  margin: 0;
+}
+
+.section-header.clickable:hover {
+  background: var(--bg-tertiary);
+  color: var(--accent-color);
+}
+
+.section-header.clickable:active {
+  transform: scale(0.98);
 }
 
 /* Header da Toolbar */
@@ -297,7 +316,7 @@
 .tool-section.collapsed .tool-buttons,
 .tool-section.collapsed .color-picker,
 .tool-section.collapsed .thickness-control,
-.tool-section.collapsed .icons-panel,
+
 .tool-section.collapsed .units-panel {
   display: none;
 }
@@ -1043,39 +1062,7 @@ canvas {
   transition: all var(--transition-normal);
 }
 
-.icons-panel {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-}
 
-.icon-button {
-  background: var(--bg-secondary);
-  border: 2px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1.5rem;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-button:hover {
-  border-color: var(--accent-color);
-  background: var(--bg-tertiary);
-  transform: translateY(-1px);
-}
-
-.icon-button.active {
-  border-color: var(--accent-color);
-  background: var(--accent-color);
-  color: var(--text-primary);
-  box-shadow: 0 2px 8px var(--shadow-accent);
-}
 
 .slider-container {
   display: flex;
@@ -2736,30 +2723,7 @@ canvas {
   transition: opacity var(--transition-fast);
 }
 
-.icon-button:hover {
-  border-color: var(--border-light);
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px var(--shadow-medium);
-}
 
-.icon-button:hover::before {
-  opacity: 1;
-}
-
-.icon-button.active {
-  border-color: var(--accent-color);
-  background: var(--accent-color);
-  color: var(--text-primary);
-  box-shadow: 0 6px 24px var(--shadow-accent);
-  transform: translateY(-2px);
-}
-
-.icon-button.active::before {
-  opacity: 1;
-  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
-}
 
 /* Painel de Unidades - Design Profissional */
 .units-panel {

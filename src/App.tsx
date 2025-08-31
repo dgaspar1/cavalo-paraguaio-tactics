@@ -41,6 +41,21 @@ interface TempLine {
     }>;
 }
 
+interface GeometricShape {
+    id: string;
+    type: 'square' | 'circle' | 'triangle';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    rotation: number;
+    color: string;
+    strokeWidth: number;
+    isSelected: boolean;
+    layerId: string;
+    timestamp: number;
+}
+
 interface VideoLink {
     id: string;
     playerId: string;
@@ -52,7 +67,7 @@ interface VideoLink {
     description?: string;
 }
 
-type Tool = 'brush' | 'eraser' | 'text' | 'icon' | 'temp-line' | 'unit';
+type Tool = 'brush' | 'eraser' | 'text' | 'icon' | 'temp-line' | 'unit' | 'square' | 'circle' | 'triangle' | 'select';
 type IconType = 'mob' | 'npc' | 'resource' | 'boss' | 'portal' | 'quest';
 
 const App: React.FC = () => {
@@ -63,7 +78,14 @@ const App: React.FC = () => {
     const [currentColor, setCurrentColor] = useState<string>('#ff0000');
     const [brushSize, setBrushSize] = useState<number>(5);
     const [isDrawing, setIsDrawing] = useState<boolean>(false);
-    const [selectedIcon, setSelectedIcon] = useState<IconType>('mob');
+    const [isDrawingShape, setIsDrawingShape] = useState<boolean>(false);
+    const [shapeStartPos, setShapeStartPos] = useState<{ x: number; y: number } | null>(null);
+    const [shapes, setShapes] = useState<GeometricShape[]>([]);
+    const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+    const [isResizing, setIsResizing] = useState<boolean>(false);
+    const [isRotating, setIsRotating] = useState<boolean>(false);
+    const [resizeHandle, setResizeHandle] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
+
     const [selectedUnitType, setSelectedUnitType] = useState('tank');
     const [layers, setLayers] = useState<Layer[]>([]);
     const [activeLayerId, setActiveLayerId] = useState<string>('');
@@ -90,7 +112,7 @@ const App: React.FC = () => {
         timestamp: number;
     }>>([]);
     const [chatInput, setChatInput] = useState<string>('');
-    const [showChat, setShowChat] = useState<boolean>(true);
+
     const [playerName, setPlayerName] = useState<string>('');
     const [showNameInput, setShowNameInput] = useState<boolean>(true);
 
@@ -119,7 +141,7 @@ const App: React.FC = () => {
 
     // Sistema de carregamento de ícones
     const [loadedIcons, setLoadedIcons] = useState<{ [key: string]: HTMLImageElement }>({});
-    const [iconsLoaded, setIconsLoaded] = useState<boolean>(false);
+
     const [isResizingLayers, setIsResizingLayers] = useState<boolean>(false);
 
     // Estados para controlar seções colapsáveis da toolbar
@@ -139,11 +161,20 @@ const App: React.FC = () => {
         actions: false
     });
 
+    // Estados para controlar seções retráteis (acordeão)
+    const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
+        arsenal: true,
+        identification: true,
+        thickness: true,
+        units: true,
+        actions: true
+    });
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const contextRef = useRef<CanvasRenderingContext2D | null>(null);
     const backgroundImageRef = useRef<HTMLImageElement | null>(null);
     const playerId = useRef<string>(uuidv4());
-    const tempLineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     const lastMousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const currentTempLine = useRef<TempLine | null>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -268,19 +299,6 @@ const App: React.FC = () => {
 
     // Inicializar camadas
     useEffect(() => {
-        const createLayer = (name: string): Layer => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 800;
-            canvas.height = 600;
-            return {
-                id: uuidv4(),
-                name,
-                visible: true,
-                locked: false,
-                canvas
-            };
-        };
-
         // Não criar camadas automaticamente - aguardar layers-state
         console.log('📋 Aguardando layers-state do servidor...');
     }, []);
@@ -332,7 +350,6 @@ const App: React.FC = () => {
                     iconsMap[key] = img;
                 });
                 setLoadedIcons(iconsMap);
-                setIconsLoaded(true);
                 console.log('✅ Ícones das unidades carregados com sucesso');
             } catch (error) {
                 console.error('❌ Erro ao carregar ícones:', error);
@@ -740,6 +757,13 @@ const App: React.FC = () => {
             }
         });
 
+        // Desenhar formas geométricas
+        shapes.forEach(shape => {
+            if (shape.layerId === activeLayerId) {
+                drawShape(context, shape);
+            }
+        });
+
         // Desenhar linhas temporárias com fade progressivo
         const now = Date.now();
         tempLines.forEach(line => {
@@ -770,10 +794,101 @@ const App: React.FC = () => {
         context.restore();
     };
 
-    // Atualizar redraw quando camadas ou linhas temporárias mudarem
+    const drawShape = (ctx: CanvasRenderingContext2D, shape: GeometricShape) => {
+        ctx.save();
+
+        // Aplicar transformações
+        const centerX = shape.x + shape.width / 2;
+        const centerY = shape.y + shape.height / 2;
+        ctx.translate(centerX, centerY);
+        ctx.rotate(shape.rotation);
+        ctx.translate(-centerX, -centerY);
+
+        // Configurar estilo
+        ctx.strokeStyle = shape.color;
+        ctx.fillStyle = 'transparent';
+        ctx.lineWidth = shape.strokeWidth;
+
+        // Desenhar forma baseada no tipo
+        switch (shape.type) {
+            case 'square':
+                ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+                break;
+            case 'circle':
+                const radius = Math.max(shape.width, shape.height) / 2;
+                ctx.beginPath();
+                ctx.arc(shape.x + shape.width / 2, shape.y + shape.height / 2, radius, 0, 2 * Math.PI);
+                ctx.stroke();
+                break;
+            case 'triangle':
+                ctx.beginPath();
+                ctx.moveTo(shape.x + shape.width / 2, shape.y);
+                ctx.lineTo(shape.x, shape.y + shape.height);
+                ctx.lineTo(shape.x + shape.width, shape.y + shape.height);
+                ctx.closePath();
+                ctx.stroke();
+                break;
+        }
+
+        // Desenhar controles de seleção se a forma estiver selecionada
+        if (shape.isSelected) {
+            drawSelectionControls(ctx, shape);
+        }
+
+        ctx.restore();
+    };
+
+    const drawSelectionControls = (ctx: CanvasRenderingContext2D, shape: GeometricShape) => {
+        // Handles de redimensionamento
+        const handles = [
+            { x: shape.x, y: shape.y, type: 'nw' },
+            { x: shape.x + shape.width, y: shape.y, type: 'ne' },
+            { x: shape.x, y: shape.y + shape.height, type: 'sw' },
+            { x: shape.x + shape.width, y: shape.y + shape.height, type: 'se' }
+        ];
+
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#0066ff';
+        ctx.lineWidth = 2;
+
+        handles.forEach(handle => {
+            ctx.beginPath();
+            ctx.arc(handle.x, handle.y, 6, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+        });
+
+        // Handle de rotação
+        const rotationHandle = {
+            x: shape.x + shape.width / 2,
+            y: shape.y - 25
+        };
+
+        ctx.beginPath();
+        ctx.arc(rotationHandle.x, rotationHandle.y, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // Linha de conexão para rotação
+        ctx.beginPath();
+        ctx.moveTo(shape.x + shape.width / 2, shape.y);
+        ctx.lineTo(rotationHandle.x, rotationHandle.y);
+        ctx.strokeStyle = '#0066ff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Borda de seleção
+        ctx.strokeStyle = '#0066ff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(shape.x - 2, shape.y - 2, shape.width + 4, shape.height + 4);
+        ctx.setLineDash([]);
+    };
+
+    // Atualizar redraw quando camadas, linhas temporárias ou formas mudarem
     useEffect(() => {
         redrawCanvas();
-    }, [layers, tempLines]);
+    }, [layers, tempLines, shapes]);
 
     // Forçar redesenho quando voltar para a aba canvas
     useEffect(() => {
@@ -920,6 +1035,44 @@ const App: React.FC = () => {
                 });
             }
             return;
+        } else if (['square', 'circle', 'triangle'].includes(currentTool)) {
+            // Iniciar desenho de forma geométrica
+            setIsDrawingShape(true);
+            const mousePos = getMousePos(e);
+            setShapeStartPos(mousePos);
+            return;
+        } else if (currentTool === 'select') {
+            // Modo de seleção
+            const mousePos = getMousePos(e);
+            const clickedShape = findShapeAtPosition(mousePos);
+
+            if (clickedShape) {
+                // Selecionar forma
+                setSelectedShapeId(clickedShape.id);
+                setShapes(prev => prev.map(shape => ({
+                    ...shape,
+                    isSelected: shape.id === clickedShape.id
+                })));
+
+                // Verificar se clicou em um handle de redimensionamento
+                const handle = getResizeHandle(mousePos, clickedShape);
+                if (handle) {
+                    setIsResizing(true);
+                    setResizeHandle(handle);
+                    console.log('🔧 Iniciando redimensionamento com handle:', handle);
+                } else if (isNearRotationHandle(mousePos, clickedShape)) {
+                    setIsRotating(true);
+                    console.log('🔄 Iniciando rotação');
+                } else {
+                    console.log('👆 Forma selecionada para movimento');
+                }
+            } else {
+                // Deselecionar
+                setSelectedShapeId(null);
+                setShapes(prev => prev.map(shape => ({ ...shape, isSelected: false })));
+                console.log('❌ Nenhuma forma selecionada');
+            }
+            return;
         }
 
         const activeLayer = layers.find(l => l.id === activeLayerId);
@@ -954,6 +1107,102 @@ const App: React.FC = () => {
         if (e.buttons !== 1) {
             stopDrawing();
             return;
+        }
+
+        // Verificar se está redimensionando ou rotacionando uma forma
+        if (isResizing && selectedShapeId && resizeHandle) {
+            const mousePos = getMousePos(e);
+            const selectedShape = shapes.find(s => s.id === selectedShapeId);
+
+            if (selectedShape) {
+                console.log('🔧 Redimensionando forma:', resizeHandle, 'mouse:', mousePos);
+                setShapes(prev => prev.map(shape => {
+                    if (shape.id === selectedShapeId) {
+                        let newWidth = shape.width;
+                        let newHeight = shape.height;
+                        let newX = shape.x;
+                        let newY = shape.y;
+
+                        switch (resizeHandle) {
+                            case 'se':
+                                newWidth = Math.max(10, mousePos.x - shape.x);
+                                newHeight = Math.max(10, mousePos.y - shape.y);
+                                break;
+                            case 'sw':
+                                newWidth = Math.max(10, (shape.x + shape.width) - mousePos.x);
+                                newHeight = Math.max(10, mousePos.y - shape.y);
+                                newX = mousePos.x;
+                                break;
+                            case 'ne':
+                                newWidth = Math.max(10, mousePos.x - shape.x);
+                                newHeight = Math.max(10, (shape.y + shape.height) - mousePos.y);
+                                newY = mousePos.y;
+                                break;
+                            case 'nw':
+                                newWidth = Math.max(10, (shape.x + shape.width) - mousePos.x);
+                                newHeight = Math.max(10, (shape.y + shape.height) - mousePos.y);
+                                newX = mousePos.x;
+                                newY = mousePos.y;
+                                break;
+                        }
+
+                        console.log('📏 Novas dimensões:', { newX, newY, newWidth, newHeight });
+                        return {
+                            ...shape,
+                            x: Math.max(0, newX),
+                            y: Math.max(0, newY),
+                            width: newWidth,
+                            height: newHeight
+                        };
+                    }
+                    return shape;
+                }));
+                redrawCanvas();
+                return;
+            }
+        }
+
+        if (isRotating && selectedShapeId) {
+            const mousePos = getMousePos(e);
+            const selectedShape = shapes.find(s => s.id === selectedShapeId);
+
+            if (selectedShape) {
+                const centerX = selectedShape.x + selectedShape.width / 2;
+                const centerY = selectedShape.y + selectedShape.height / 2;
+                const angle = Math.atan2(mousePos.y - centerY, mousePos.x - centerX);
+
+                setShapes(prev => prev.map(shape => {
+                    if (shape.id === selectedShapeId) {
+                        return { ...shape, rotation: angle };
+                    }
+                    return shape;
+                }));
+                redrawCanvas();
+                return;
+            }
+        }
+
+        // Arrastar forma selecionada
+        if (selectedShapeId && !isResizing && !isRotating && currentTool === 'select') {
+            const selectedShape = shapes.find(s => s.id === selectedShapeId);
+            if (selectedShape) {
+                const mousePos = getMousePos(e);
+                const deltaX = mousePos.x - lastMousePos.current.x;
+                const deltaY = mousePos.y - lastMousePos.current.y;
+
+                setShapes(prev => prev.map(shape => {
+                    if (shape.id === selectedShapeId) {
+                        return {
+                            ...shape,
+                            x: Math.max(0, shape.x + deltaX),
+                            y: Math.max(0, shape.y + deltaY)
+                        };
+                    }
+                    return shape;
+                }));
+                redrawCanvas();
+                return;
+            }
         }
 
         const mousePos = getMousePos(e);
@@ -1066,7 +1315,40 @@ const App: React.FC = () => {
 
     const stopDrawing = () => {
         setIsDrawing(false);
+        setIsDrawingShape(false);
+        setIsResizing(false);
+        setIsRotating(false);
+        setResizeHandle(null);
         currentTempLine.current = null;
+
+        // Finalizar desenho de forma geométrica
+        if (isDrawingShape && shapeStartPos && currentTool && ['square', 'circle', 'triangle'].includes(currentTool)) {
+            const endPos = lastMousePos.current;
+            if (endPos) {
+                const newShape: GeometricShape = {
+                    id: uuidv4(),
+                    type: currentTool as 'square' | 'circle' | 'triangle',
+                    x: Math.min(shapeStartPos.x, endPos.x),
+                    y: Math.min(shapeStartPos.y, endPos.y),
+                    width: Math.abs(endPos.x - shapeStartPos.x),
+                    height: Math.abs(endPos.y - shapeStartPos.y),
+                    rotation: 0,
+                    color: currentColor,
+                    strokeWidth: brushSize,
+                    isSelected: false,
+                    layerId: activeLayerId,
+                    timestamp: Date.now()
+                };
+
+                // Garantir tamanho mínimo
+                if (newShape.width < 10) newShape.width = 10;
+                if (newShape.height < 10) newShape.height = 10;
+
+                setShapes(prev => [...prev, newShape]);
+                redrawCanvas();
+            }
+            setShapeStartPos(null);
+        }
 
         // Sincronizar imediatamente quando parar de desenhar
         if (syncTimeout.current) {
@@ -1143,26 +1425,23 @@ const App: React.FC = () => {
                 layerContext.fillStyle = '#000';
                 layerContext.fillText(unitType.name, mousePos.x, mousePos.y + iconSize / 2 + 15);
             }
-        } else {
-            // Adicionar ícone normal
-            layerContext.font = '24px Arial';
-            layerContext.fillText(icons[selectedIcon], mousePos.x, mousePos.y);
-        }
 
-        redrawCanvas();
 
-        if (socket) {
-            socket.emit('drawing', {
-                type: currentTool === 'unit' ? 'unit' : 'icon',
-                data: {
-                    iconType: currentTool === 'unit' ? selectedUnitType : selectedIcon,
-                    x: mousePos.x,
-                    y: mousePos.y
-                },
-                playerId: playerId.current,
-                sessionId,
-                layerId: activeLayerId
-            });
+            redrawCanvas();
+
+            if (socket) {
+                socket.emit('drawing', {
+                    type: 'unit',
+                    data: {
+                        iconType: selectedUnitType,
+                        x: mousePos.x,
+                        y: mousePos.y
+                    },
+                    playerId: playerId.current,
+                    sessionId,
+                    layerId: activeLayerId
+                });
+            }
         }
     };
 
@@ -1293,6 +1572,7 @@ const App: React.FC = () => {
 
                 canvasData: layer.canvas.toDataURL()
             })),
+            shapes: shapes,
             messages: messages,
             tempLines: tempLines,
             zoom,
@@ -1374,6 +1654,13 @@ const App: React.FC = () => {
         if (e.key === 'Control' || e.key === 'Meta') {
             setIsPanning(true);
         }
+
+        // Deletar forma selecionada
+        if (e.key === 'Delete' && selectedShapeId && playerRole === 'editor') {
+            setShapes(prev => prev.filter(shape => shape.id !== selectedShapeId));
+            setSelectedShapeId(null);
+            redrawCanvas();
+        }
     };
 
     const handleKeyUp = (e: React.KeyboardEvent) => {
@@ -1429,6 +1716,7 @@ const App: React.FC = () => {
             // Importar outros dados
             if (data.messages) setMessages(data.messages);
             if (data.tempLines) setTempLines(data.tempLines);
+            if (data.shapes) setShapes(data.shapes);
             if (data.videoLinks) setVideoLinks(data.videoLinks);
             if (data.zoom) setZoom(data.zoom);
             if (data.pan) setPan(data.pan);
@@ -1477,6 +1765,107 @@ const App: React.FC = () => {
         const x = (e.clientX - rect.left - pan.x) / zoom;
         const y = (e.clientY - rect.top - pan.y) / zoom;
         return { x, y };
+    };
+
+    // Funções auxiliares para seleção e transformação de formas
+    const findShapeAtPosition = (pos: { x: number; y: number }): GeometricShape | null => {
+        // Procurar formas de trás para frente (últimas desenhadas primeiro)
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            const shape = shapes[i];
+            if (isPointInShape(pos, shape)) {
+                return shape;
+            }
+        }
+        return null;
+    };
+
+    const isPointInShape = (pos: { x: number; y: number }, shape: GeometricShape): boolean => {
+        // Para formas não rotacionadas, usar detecção simples
+        if (shape.rotation === 0) {
+            switch (shape.type) {
+                case 'square':
+                    return pos.x >= shape.x && pos.x <= shape.x + shape.width &&
+                        pos.y >= shape.y && pos.y <= shape.y + shape.height;
+                case 'circle':
+                    const centerX = shape.x + shape.width / 2;
+                    const centerY = shape.y + shape.height / 2;
+                    const radius = Math.max(shape.width, shape.height) / 2;
+                    const distance = Math.sqrt(
+                        Math.pow(pos.x - centerX, 2) + Math.pow(pos.y - centerY, 2)
+                    );
+                    return distance <= radius;
+                case 'triangle':
+                    // Verificar se está dentro do retângulo delimitador
+                    return pos.x >= shape.x && pos.x <= shape.x + shape.width &&
+                        pos.y >= shape.y && pos.y <= shape.y + shape.height;
+                default:
+                    return false;
+            }
+        } else {
+            // Para formas rotacionadas, aplicar transformação inversa
+            const cos = Math.cos(-shape.rotation);
+            const sin = Math.sin(-shape.rotation);
+
+            const centerX = shape.x + shape.width / 2;
+            const centerY = shape.y + shape.height / 2;
+
+            const dx = pos.x - centerX;
+            const dy = pos.y - centerY;
+
+            const rotatedX = dx * cos - dy * sin;
+            const rotatedY = dx * sin + dy * cos;
+
+            const halfWidth = shape.width / 2;
+            const halfHeight = shape.height / 2;
+
+            switch (shape.type) {
+                case 'square':
+                    return rotatedX >= -halfWidth && rotatedX <= halfWidth &&
+                        rotatedY >= -halfHeight && rotatedY <= halfHeight;
+                case 'circle':
+                    const radius = Math.max(shape.width, shape.height) / 2;
+                    const distance = Math.sqrt(rotatedX * rotatedX + rotatedY * rotatedY);
+                    return distance <= radius;
+                case 'triangle':
+                    return rotatedX >= -halfWidth && rotatedX <= halfWidth &&
+                        rotatedY >= -halfHeight && rotatedY <= halfHeight;
+                default:
+                    return false;
+            }
+        }
+    };
+
+    const getResizeHandle = (pos: { x: number; y: number }, shape: GeometricShape): 'nw' | 'ne' | 'sw' | 'se' | null => {
+        const handleSize = 10;
+        const handles = {
+            nw: { x: shape.x, y: shape.y },
+            ne: { x: shape.x + shape.width, y: shape.y },
+            sw: { x: shape.x, y: shape.y + shape.height },
+            se: { x: shape.x + shape.width, y: shape.y + shape.height }
+        };
+
+        for (const [handle, handlePos] of Object.entries(handles)) {
+            const distance = Math.sqrt(
+                Math.pow(pos.x - handlePos.x, 2) + Math.pow(pos.y - handlePos.y, 2)
+            );
+            if (distance <= handleSize) {
+                return handle as 'nw' | 'ne' | 'sw' | 'se';
+            }
+        }
+        return null;
+    };
+
+    const isNearRotationHandle = (pos: { x: number; y: number }, shape: GeometricShape): boolean => {
+        const handleSize = 10;
+        const rotationHandle = {
+            x: shape.x + shape.width / 2,
+            y: shape.y - 25
+        };
+
+        const distance = Math.sqrt(
+            Math.pow(pos.x - rotationHandle.x, 2) + Math.pow(pos.y - rotationHandle.y, 2)
+        );
+        return distance <= handleSize;
     };
 
     const startPanning = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1566,6 +1955,13 @@ const App: React.FC = () => {
         }));
     };
 
+    const toggleOpenSection = (section: string) => {
+        setOpenSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
+    };
+
     const toggleToolbar = () => {
         setShowToolbar(!showToolbar);
     };
@@ -1583,6 +1979,17 @@ const App: React.FC = () => {
         socket.on('drawing', handleRemoteDrawing);
         socket.on('temp-line', handleRemoteTempLine);
         socket.on('layer-update', handleRemoteLayerUpdate);
+        socket.on('shape-update', (data: any) => {
+            if (data.action === 'create') {
+                setShapes(prev => [...prev, data.shape]);
+            } else if (data.action === 'update') {
+                setShapes(prev => prev.map(shape =>
+                    shape.id === data.shape.id ? data.shape : shape
+                ));
+            } else if (data.action === 'delete') {
+                setShapes(prev => prev.filter(shape => shape.id !== data.shapeId));
+            }
+        });
         socket.on('chat-message', (message) => {
             setMessages(prev => [...prev, message]);
         });
@@ -1605,6 +2012,7 @@ const App: React.FC = () => {
             socket.off('drawing');
             socket.off('temp-line');
             socket.off('layer-update');
+            socket.off('shape-update');
             socket.off('chat-message');
             socket.off('player-name');
             socket.off('video-link');
@@ -1670,116 +2078,185 @@ const App: React.FC = () => {
 
                             {!showToolbar && (
                                 <div className="minimized-icons">
+                                    <button className="minimized-icon" title="Seleção e Transformação">👆</button>
                                     <button className="minimized-icon" title="Arsenal">⚔️</button>
                                     <button className="minimized-icon" title="Identificação de Unidade">🎨</button>
                                     <button className="minimized-icon" title="Calibre de Traço">📏</button>
+                                    <button className="minimized-icon" title="Formas Geométricas">⬜</button>
                                     <button className="minimized-icon" title="Efetivo de Combate">⚔️</button>
                                     <button className="minimized-icon" title="Ações de Campo">🛠️</button>
                                 </div>
                             )}
 
                             <div className="tool-section">
-                                <h3>⚔️ Arsenal Tático</h3>
-                                <div className="tool-buttons">
-                                    <button
-                                        className={`tool-button ${currentTool === 'brush' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                        onClick={() => setCurrentTool('brush')}
-                                        title="Marcador Tático"
-                                        disabled={playerRole !== 'editor'}
-                                    >
-                                        ✏️
-                                    </button>
-                                    <button
-                                        className={`tool-button ${currentTool === 'eraser' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                        onClick={() => setCurrentTool('eraser')}
-                                        title="Neutralizador de Marcas"
-                                        disabled={playerRole !== 'editor'}
-                                    >
-                                        🧽
-                                    </button>
+                                <h3
+                                    className="section-header clickable"
+                                    onClick={() => toggleOpenSection('arsenal')}
+                                >
+                                    ⚔️ Arsenal Tático {openSections.arsenal ? '▼' : '▶'}
+                                </h3>
+                                {openSections.arsenal && (
+                                    <div className="tool-buttons">
+                                        <button
+                                            className={`tool-button ${currentTool === 'select' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('select')}
+                                            title="Selecionar e Transformar"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            👆
+                                        </button>
+                                        <button
+                                            className={`tool-button ${currentTool === 'brush' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('brush')}
+                                            title="Marcador Tático"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            className={`tool-button ${currentTool === 'eraser' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('eraser')}
+                                            title="Neutralizador de Marcas"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            🧽
+                                        </button>
 
-                                    <button
-                                        className={`tool-button ${currentTool === 'temp-line' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                        onClick={() => setCurrentTool('temp-line')}
-                                        title="Traço de Reconhecimento"
-                                        disabled={playerRole !== 'editor'}
-                                    >
-                                        ⚡
-                                    </button>
-                                    <button
-                                        className={`tool-button ${currentTool === 'unit' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
-                                        onClick={() => setCurrentTool('unit')}
-                                        title="Efetivo de Combate"
-                                        disabled={playerRole !== 'editor'}
-                                    >
-                                        ⚔️
-                                    </button>
-                                </div>
+                                        <button
+                                            className={`tool-button ${currentTool === 'temp-line' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('temp-line')}
+                                            title="Traço de Reconhecimento"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            ⚡
+                                        </button>
+                                        <button
+                                            className={`tool-button ${currentTool === 'square' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('square')}
+                                            title="Quadrado/Retângulo"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            ⬜
+                                        </button>
+                                        <button
+                                            className={`tool-button ${currentTool === 'circle' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('circle')}
+                                            title="Círculo/Elipse"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            ⭕
+                                        </button>
+                                        <button
+                                            className={`tool-button ${currentTool === 'triangle' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('triangle')}
+                                            title="Triângulo"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            🔺
+                                        </button>
+                                        <button
+                                            className={`tool-button ${currentTool === 'unit' ? 'active' : ''} ${playerRole !== 'editor' ? 'disabled' : ''}`}
+                                            onClick={() => setCurrentTool('unit')}
+                                            title="Efetivo de Combate"
+                                            disabled={playerRole !== 'editor'}
+                                        >
+                                            ⚔️
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="tool-section">
-                                <h3>🎨 Identificação de Unidade</h3>
-                                <div className="color-picker">
-                                    {colors.map((color) => (
-                                        <div
-                                            key={color}
-                                            className={`color-option ${currentColor === color ? 'active' : ''}`}
-                                            style={{ backgroundColor: color }}
-                                            onClick={() => setCurrentColor(color)}
-                                            title={`Cor: ${color}`}
+                                <h3
+                                    className="section-header clickable"
+                                    onClick={() => toggleOpenSection('identification')}
+                                >
+                                    🎨 Identificação de Unidade {openSections.identification ? '▼' : '▶'}
+                                </h3>
+                                {openSections.identification && (
+                                    <div className="color-picker">
+                                        {colors.map((color) => (
+                                            <div
+                                                key={color}
+                                                className={`color-option ${currentColor === color ? 'active' : ''}`}
+                                                style={{ backgroundColor: color }}
+                                                onClick={() => setCurrentColor(color)}
+                                                title={`Cor: ${color}`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="tool-section">
+                                <h3
+                                    className="section-header clickable"
+                                    onClick={() => toggleOpenSection('thickness')}
+                                >
+                                    📏 Calibre de Traço {openSections.thickness ? '▼' : '▶'}
+                                </h3>
+                                {openSections.thickness && (
+                                    <div className="thickness-control">
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="20"
+                                            value={brushSize}
+                                            onChange={(e) => setBrushSize(Number(e.target.value))}
+                                            className="thickness-slider"
+                                            disabled={playerRole !== 'editor'}
                                         />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="tool-section">
-                                <h3>📏 Calibre de Traço</h3>
-                                <div className="thickness-control">
-                                    <input
-                                        type="range"
-                                        min="1"
-                                        max="20"
-                                        value={brushSize}
-                                        onChange={(e) => setBrushSize(Number(e.target.value))}
-                                        className="thickness-slider"
-                                        disabled={playerRole !== 'editor'}
-                                    />
-                                    <span className="thickness-value">{brushSize}px</span>
-                                </div>
+                                        <span className="thickness-value">{brushSize}px</span>
+                                    </div>
+                                )}
                             </div>
 
 
 
                             {currentTool === 'unit' && (
                                 <div className="tool-section">
-                                    <h3>⚔️ Efetivo de Combate</h3>
-                                    <div className="units-panel">
-                                        {Object.entries(pwUnitTypes).map(([key, unit]) => (
-                                            <button
-                                                key={key}
-                                                className={`unit-button ${selectedUnitType === key ? 'active' : ''}`}
-                                                onClick={() => setSelectedUnitType(key)}
-                                                title={unit.description}
-                                                disabled={playerRole !== 'editor'}
-                                            >
-                                                <div className="unit-icon">{unit.iconPath}</div>
-                                                <div className="unit-name">{unit.name}</div>
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <h3
+                                        className="section-header clickable"
+                                        onClick={() => toggleOpenSection('units')}
+                                    >
+                                        ⚔️ Efetivo de Combate {openSections.units ? '▼' : '▶'}
+                                    </h3>
+                                    {openSections.units && (
+                                        <div className="units-panel">
+                                            {Object.entries(pwUnitTypes).map(([key, unit]) => (
+                                                <button
+                                                    key={key}
+                                                    className={`unit-button ${selectedUnitType === key ? 'active' : ''}`}
+                                                    onClick={() => setSelectedUnitType(key)}
+                                                    title={unit.description}
+                                                    disabled={playerRole !== 'editor'}
+                                                >
+                                                    <div className="unit-icon">{unit.iconPath}</div>
+                                                    <div className="unit-name">{unit.name}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             <div className="tool-section">
-                                <h3>🔄 Ações de Campo</h3>
-                                <button
-                                    className="tool-button"
-                                    onClick={clearCanvas}
-                                    disabled={playerRole !== 'editor'}
-                                    title="Redefinir Campo"
+                                <h3
+                                    className="section-header clickable"
+                                    onClick={() => toggleOpenSection('actions')}
                                 >
-                                    🗑️
-                                </button>
+                                    🔄 Ações de Campo {openSections.actions ? '▼' : '▶'}
+                                </h3>
+                                {openSections.actions && (
+                                    <button
+                                        className="tool-button"
+                                        onClick={clearCanvas}
+                                        disabled={playerRole !== 'editor'}
+                                        title="Redefinir Campo"
+                                    >
+                                        🗑️
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -1897,7 +2374,7 @@ const App: React.FC = () => {
                                                 key={`${layer.id}-${index}`}
                                                 className={`layer-item ${activeLayerId === layer.id ? 'active' : ''} ${layer.locked ? 'locked' : ''}`}
                                                 draggable
-                                                onDragStart={(e) => setDragLayerId(layer.id)}
+                                                onDragStart={() => setDragLayerId(layer.id)}
                                                 onDragOver={(e) => e.preventDefault()}
                                                 onDrop={(e) => {
                                                     e.preventDefault();
